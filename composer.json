@@ -1,0 +1,12 @@
+{
+    "name": "ontap/mastercard",
+    "description": "Low level HTTP API client",
+    "type": "library",
+    "require": {
+        "php-http/curl-client": "^1.7",
+        "php-http/client-common": "^1.8",
+        "guzzlehttp/psr7": "^1.5",
+        "php-http/logger-plugin": "^1.0"
+    },
+    "minimum-stability": "alpha"
+}
