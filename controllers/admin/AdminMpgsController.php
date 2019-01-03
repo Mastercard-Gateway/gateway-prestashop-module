@@ -31,43 +31,13 @@ class AdminMpgsController extends ModuleAdminController
             $this->module->getApiEndpoint(),
             $this->module->getApiVersion(),
             $this->module->getConfigValue('mpgs_merchant_id'),
-            $this->module->getConfigValue('mpgs_api_password')
+            $this->module->getConfigValue('mpgs_api_password'),
+            $this->module->getWebhookUrl()
         );
 
         $this->{$actionName}();
 
         parent::postProcess();
-    }
-
-    /**
-     * @param string $type
-     * @param Order order
-     * @return bool|string
-     */
-    protected function findTxnId($type, $order)
-    {
-        $authTxn = $this->findTxn($type, $order);
-        if (!$authTxn) {
-            return $authTxn;
-        }
-
-        list($mark, $txnId) = explode('-', $authTxn->transaction_id, 2);
-        return $txnId;
-    }
-
-    /**
-     * @param string $type
-     * @param Order $order
-     * @return bool|OrderPayment
-     */
-    protected function findTxn($type, $order)
-    {
-        foreach ($order->getOrderPayments() as $payment) {
-            if (stripos($payment->transaction_id, $type . '-') !== false) {
-                return $payment;
-            }
-        }
-        return false;
     }
 
     /**
@@ -81,7 +51,7 @@ class AdminMpgsController extends ModuleAdminController
         $order = new Order($orderId);
 
         try {
-            $authTxnId = $this->findTxnId('auth', $order);
+            $authTxnId = $this->module->findTxnId('auth', $order);
 
             if (!$authTxnId) {
                 throw new Exception('Authorization transaction not found.');
@@ -123,13 +93,13 @@ class AdminMpgsController extends ModuleAdminController
         $order = new Order($orderId);
 
         try {
-            $authTxnId = $this->findTxnId('auth', $order);
+            $authTxnId = $this->module->findTxnId('auth', $order);
 
             if (!$authTxnId) {
                 throw new Exception('Authorization transaction not found.');
             }
 
-            $authTxn = $this->findTxn('auth', $order);
+            $authTxn = $this->module->findTxn('auth', $order);
             $currency = Currency::getCurrency($authTxn->id_currency);
 
             $newTxnId = 'capture-' . $authTxnId;
@@ -169,14 +139,14 @@ class AdminMpgsController extends ModuleAdminController
         $order = new Order($orderId);
 
         try {
-            $txnId = $this->findTxnId('capture', $order);
-            $txn = $this->findTxn('capture', $order);
-
-            $currency = Currency::getCurrency($txn->id_currency);
+            $txnId = $this->module->findTxnId('capture', $order);
+            $txn = $this->module->findTxn('capture', $order);
 
             if (!$txnId) {
                 throw new Exception('Capture/Pay transaction not found.');
             }
+
+            $currency = Currency::getCurrency($txn->id_currency);
 
             $newTxnId = 'refund-' . $txnId;
             $response = $this->client->refund($order->id_cart, $newTxnId, $txn->amount, $currency['iso_code']);

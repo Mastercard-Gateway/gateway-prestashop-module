@@ -40,7 +40,8 @@ class MastercardHostedCheckoutModuleFrontController extends ModuleFrontControlle
             $this->module->getApiEndpoint(),
             $this->module->getApiVersion(),
             $this->module->getConfigValue('mpgs_merchant_id'),
-            $this->module->getConfigValue('mpgs_api_password')
+            $this->module->getConfigValue('mpgs_api_password'),
+            $this->module->getWebhookUrl()
         );
     }
 
@@ -52,12 +53,7 @@ class MastercardHostedCheckoutModuleFrontController extends ModuleFrontControlle
     {
         $orderId = (int)Context::getContext()->cart->id;
 
-        $response = $this->client->createCheckoutSession(array(
-            'order' => array(
-                'id' => $orderId,
-                'currency' => Context::getContext()->currency->iso_code
-            )
-        ));
+        $response = $this->client->createCheckoutSession($orderId, Context::getContext()->currency->iso_code);
 
         $responseData = array(
             'session_id' => $response['session']['id'],
@@ -116,9 +112,7 @@ class MastercardHostedCheckoutModuleFrontController extends ModuleFrontControlle
             $this->redirectWithNotifications('index.php?controller=order&step=1');
         }
 
-        $response = $this->client->retrieveOrder(array(
-            'order_id' => $orderId
-        ));
+        $response = $this->client->retrieveOrder($orderId);
 
         $this->module->validateOrder(
             (int)$cart->id,

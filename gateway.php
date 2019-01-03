@@ -108,15 +108,23 @@ class GatewayService
     protected $client;
 
     /**
+     * @var string|null
+     */
+    protected $webhookUrl;
+
+    /**
      * GatewayService constructor.
      * @param string $baseUrl
      * @param string $apiVersion
      * @param string $merchantId
      * @param string $password
+     * @param string $webhookUrl
      * @throws \Exception
      */
-    public function __construct($baseUrl, $apiVersion, $merchantId, $password)
+    public function __construct($baseUrl, $apiVersion, $merchantId, $password, $webhookUrl)
     {
+        $this->webhookUrl = $webhookUrl;
+
         $logger = new Logger('mastercard');
         $logger->pushHandler(new StreamHandler(_PS_ROOT_DIR_.'/var/logs/mastercard.log'));
 
@@ -204,21 +212,26 @@ class GatewayService
      * allows you to return the payer to the merchant's website after completing the payment attempt.
      * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/session
      *
-     * @param array $data
+     * @param string $orderId
+     * @param string $currency
      * @return array
-     * @throws \Http\Client\Exception
+     * @throws Exception
      * @throws GatewayResponseException
      */
-    public function createCheckoutSession($data)
+    public function createCheckoutSession($orderId, $currency)
     {
-        $data = array_merge($data, array(
-            'apiOperation' => 'CREATE_CHECKOUT_SESSION',
-            'partnerSolutionId' => $this->getSolutionId(),
-        ));
-
         $uri = $this->apiUrl . 'session';
 
-        $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode($data));
+        $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode(array(
+            'apiOperation' => 'CREATE_CHECKOUT_SESSION',
+            'partnerSolutionId' => $this->getSolutionId(),
+            'order' => array(
+                'id' => $orderId,
+                'currency' => $currency,
+                'notificationUrl' => $this->webhookUrl
+            )
+        )));
+
         $response = $this->client->sendRequest($request);
 
 
@@ -234,13 +247,13 @@ class GatewayService
      * Request to retrieve the details of an order and all transactions associated with this order.
      * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}
      *
-     * @param array $data
+     * @param string $orderId
      * @return array
      * @throws \Http\Client\Exception
      */
-    public function retrieveOrder($data)
+    public function retrieveOrder($orderId)
     {
-        $uri = $this->apiUrl . 'order/' . $data['order_id'];
+        $uri = $this->apiUrl . 'order/' . $orderId;
 
         $request = $this->messageFactory->createRequest('GET', $uri);
         $response = $this->client->sendRequest($request);
@@ -248,6 +261,29 @@ class GatewayService
         $response = json_decode($response->getBody(), true);
 
         $this->validateOrderResponse($response);
+
+        return $response;
+    }
+
+    /**
+     * Request to retrieve the details of a transaction. For example you can retrieve the details of an authorization that you previously executed.
+     * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
+     *
+     * @param string $orderId
+     * @param string $txnId
+     * @return array
+     * @throws Exception
+     */
+    public function retrieveTransaction($orderId, $txnId)
+    {
+        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
+
+        $request = $this->messageFactory->createRequest('GET', $uri);
+        $response = $this->client->sendRequest($request);
+
+        $response = json_decode($response->getBody(), true);
+
+        $this->validateTxnResponse($response);
 
         return $response;
     }
@@ -309,6 +345,9 @@ class GatewayService
             'transaction' => array(
                 'amount' => $amount,
                 'currency' => $currency
+            ),
+            'order' => array(
+                'notificationUrl' => $this->webhookUrl
             )
         )));
 
@@ -346,6 +385,9 @@ class GatewayService
             'transaction' => array(
                 'amount' => $amount,
                 'currency' => $currency
+            ),
+            'order' => array(
+                'notificationUrl' => $this->webhookUrl
             )
         )));
 

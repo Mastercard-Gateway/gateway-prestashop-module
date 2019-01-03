@@ -270,9 +270,10 @@ class Mastercard extends PaymentModule
             if (!Tools::getValue('test_mpgs_api_password')) {
                 $this->_postErrors[] = $this->l('Test API password is required.');
             }
-            if (!Tools::getValue('test_mpgs_webhook_secret')) {
-                $this->_postErrors[] = $this->l('Test Webhook Secret is required.');
-            }
+            // In test mode, the Secret is not required
+//            if (!Tools::getValue('test_mpgs_webhook_secret')) {
+//                $this->_postErrors[] = $this->l('Test Webhook Secret is required.');
+//            }
         }
     }
 
@@ -583,7 +584,7 @@ class Mastercard extends PaymentModule
                         'type' => 'text',
                         'label' => $this->l('Test Webhook Secret'),
                         'name' => 'test_mpgs_webhook_secret',
-                        'required' => true
+                        'required' => false
                     ),
                 ),
                 'submit' => array(
@@ -780,5 +781,48 @@ class Mastercard extends PaymentModule
     public function getJsComponent()
     {
         return 'https://'. $this->getApiEndpoint() . '/checkout/version/' . $this->getApiVersion() . '/checkout.js';
+    }
+
+    /**
+     * @return string
+     */
+    public function getWebhookUrl()
+    {
+        // SSH tunnel
+        // curl http://li301-231.members.linode.com/en/module/mastercard/webhook
+        // ssh -nNTR 0.0.0.0:80:localhost:80 root@178.79.163.231 -vvv
+        //return 'http://li301-231.members.linode.com/en/module/mastercard/webhook';
+        return $this->context->link->getModuleLink($this->name, 'webhook', array(), true);
+    }
+
+    /**
+     * @param string $type
+     * @param Order order
+     * @return bool|string
+     */
+    public function findTxnId($type, $order)
+    {
+        $authTxn = $this->findTxn($type, $order);
+        if (!$authTxn) {
+            return $authTxn;
+        }
+
+        list($mark, $txnId) = explode('-', $authTxn->transaction_id, 2);
+        return $txnId;
+    }
+
+    /**
+     * @param string $type
+     * @param Order $order
+     * @return bool|OrderPayment
+     */
+    public function findTxn($type, $order)
+    {
+        foreach ($order->getOrderPayments() as $payment) {
+            if (stripos($payment->transaction_id, $type . '-') !== false) {
+                return $payment;
+            }
+        }
+        return false;
     }
 }
