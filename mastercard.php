@@ -9,6 +9,8 @@ if (!defined('_PS_VERSION_')) {
     exit;
 }
 
+define('MPGS_ISO3_COUNTRIES', include dirname(__FILE__).'/iso3.php');
+
 require_once(dirname(__FILE__) . '/vendor/autoload.php');
 require_once(dirname(__FILE__) . '/gateway.php');
 
@@ -66,6 +68,15 @@ class Mastercard extends PaymentModule
 //        $this->limited_currencies = array('EUR');
 //        $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false).'&configure='.$this->name.'&tab_module='.$this->tab.'&module_name='.$this->name;
 //        $helper->token = Tools::getAdminTokenLite('AdminModules');
+    }
+
+    /**
+     * @param string $iso2country
+     * @return string
+     */
+    public function iso2ToIso3($iso2country)
+    {
+        return MPGS_ISO3_COUNTRIES[$iso2country];
     }
 
     /**
@@ -749,9 +760,6 @@ class Mastercard extends PaymentModule
         $this->context->smarty->assign(array(
             'hostedcheckout_action_url' => $this->context->link->getModuleLink($this->name, 'hostedcheckout', array(), true),
             'hostedcheckout_cancel_url' => $this->context->link->getModuleLink($this->name, 'hostedcheckout', array('cancel' => 1), true),
-            'mpgs_hc_theme' => Configuration::get('mpgs_hc_theme'),
-            'mpgs_hc_show_billing' => Configuration::get('mpgs_hc_show_billing', null, null, null, 'HIDE'),
-            'mpgs_hc_show_email' => Configuration::get('mpgs_hc_show_email', null, null, null, 'HIDE'),
         ));
         return $this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedcheckout/form.tpl');
     }
@@ -791,8 +799,8 @@ class Mastercard extends PaymentModule
         // SSH tunnel
         // curl http://li301-231.members.linode.com/en/module/mastercard/webhook
         // ssh -nNTR 0.0.0.0:80:localhost:80 root@178.79.163.231 -vvv
-        //return 'http://li301-231.members.linode.com/en/module/mastercard/webhook';
-        return $this->context->link->getModuleLink($this->name, 'webhook', array(), true);
+        return 'http://li301-231.members.linode.com/en/module/mastercard/webhook';
+//        return $this->context->link->getModuleLink($this->name, 'webhook', array(), true);
     }
 
     /**

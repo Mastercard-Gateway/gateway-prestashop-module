@@ -47,13 +47,54 @@ class MastercardHostedCheckoutModuleFrontController extends ModuleFrontControlle
 
     /**
      * @throws GatewayResponseException
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
      * @throws \Http\Client\Exception
      */
     protected function createSessionAndRedirect()
     {
         $orderId = (int)Context::getContext()->cart->id;
 
-        $response = $this->client->createCheckoutSession($orderId, Context::getContext()->currency->iso_code);
+        $interaction = array(
+            'theme' => GatewayService::safe(Configuration::get('mpgs_hc_theme')),
+            'locale' => Context::getContext()->language->locale,
+            'displayControl' => array(
+                'shipping' => 'HIDE',
+                'orderSummary' => 'HIDE',
+                'billingAddress' => GatewayService::safe(Configuration::get('mpgs_hc_show_billing')),
+                'customerEmail' => GatewayService::safe(Configuration::get('mpgs_hc_show_email')),
+            ),
+            'merchant' => array(
+                'name' => GatewayService::safe(Context::getContext()->shop->name, 40),
+            )
+        );
+
+        $address = new Address(Context::getContext()->cart->id_address_invoice);
+        $country = new Country($address->id_country);
+        $billing = array(
+            'address' => array(
+                'city' => GatewayService::safe($address->city, 100),
+                'country' => $this->module->iso2ToIso3($country->iso_code),
+                'postcodeZip' => GatewayService::safe($address->postcode, 10),
+                'street' => GatewayService::safe($address->address1, 100),
+                'street2' => GatewayService::safe($address->address2, 100),
+            )
+        );
+
+        $customer = array(
+            'email' => GatewayService::safe(Context::getContext()->customer->email)
+        );
+
+        $response = $this->client->createCheckoutSession(
+            $orderId,
+            GatewayService::numeric(
+                Context::getContext()->cart->getOrderTotal()
+            ),
+            Context::getContext()->currency->iso_code,
+            $interaction,
+            $customer,
+            $billing
+        );
 
         $responseData = array(
             'session_id' => $response['session']['id'],

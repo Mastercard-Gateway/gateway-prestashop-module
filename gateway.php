@@ -166,6 +166,33 @@ class GatewayService
     }
 
     /**
+     * @param $value
+     * @param int $limited
+     * @return bool|string|null
+     */
+    public static function safe($value, $limited = 0)
+    {
+        if ($value === "") {
+            return null;
+        }
+
+        if ($limited > 0 && strlen($value) > $limited) {
+            return substr($value, 0, $limited);
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param mixed $value
+     * @return string
+     */
+    public static function numeric($value)
+    {
+        return number_format($value, 2, '.', '');
+    }
+
+    /**
      * @param $data
      * @throws GatewayResponseException
      */
@@ -213,13 +240,23 @@ class GatewayService
      * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/session
      *
      * @param string $orderId
+     * @param string $amount
      * @param string $currency
+     * @param array $interaction
+     * @param array $customer
+     * @param array $billing
      * @return array
      * @throws Exception
      * @throws GatewayResponseException
      */
-    public function createCheckoutSession($orderId, $currency)
-    {
+    public function createCheckoutSession(
+        $orderId,
+        $amount,
+        $currency,
+        $interaction = array(),
+        $customer = array(),
+        $billing = array()
+    ) {
         $uri = $this->apiUrl . 'session';
 
         $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode(array(
@@ -228,8 +265,12 @@ class GatewayService
             'order' => array(
                 'id' => $orderId,
                 'currency' => $currency,
+                'amount' => $amount,
                 'notificationUrl' => $this->webhookUrl
-            )
+            ),
+            'billing' => $billing,
+            'interaction' => $interaction,
+            'customer' => $customer,
         )));
 
         $response = $this->client->sendRequest($request);
