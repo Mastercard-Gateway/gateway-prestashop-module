@@ -57,7 +57,6 @@ class MastercardHostedCheckoutModuleFrontController extends ModuleFrontControlle
 
         $interaction = array(
             'theme' => GatewayService::safe(Configuration::get('mpgs_hc_theme')),
-            'locale' => Context::getContext()->language->locale,
             'displayControl' => array(
                 'shipping' => 'HIDE',
                 'orderSummary' => 'HIDE',
@@ -174,12 +173,18 @@ class MastercardHostedCheckoutModuleFrontController extends ModuleFrontControlle
                 continue;
             }
             if ($txn['transaction']['type'] == 'AUTHORIZATION') {
+                if (!$this->client->isApproved($txn)) {
+                    throw new Exception('Transaction not approved by the gateway');
+                }
                 $order->addOrderPayment(
                     $txn['transaction']['amount'],
                     null,
                     'auth-' . $txn['transaction']['id']
                 );
             } else if ($txn['transaction']['type'] == 'CAPTURE' || $txn['transaction']['type'] == 'PAYMENT') {
+                if (!$this->client->isApproved($txn)) {
+                    throw new Exception('Transaction not approved by the gateway');
+                }
                 $order->addOrderPayment(
                     $txn['transaction']['amount'],
                     null,

@@ -155,10 +155,8 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
             $this->emitServerError('Gateway Error');
         }
 
-        $gatewayCode = $response['response']['gatewayCode'];
-
-        if (!in_array($gatewayCode, array('APPROVED', 'APPROVED_AUTO'))) {
-            $this->logger->warning(sprintf('Unexpected gateway code "%s"', $gatewayCode), $this->getLoggerContext($response));
+        if (!$this->client->isApproved($response)) {
+            $this->logger->warning(sprintf('Unexpected gateway code "%s"', $response['response']['gatewayCode']), $this->getLoggerContext($response));
             exit;
         }
 
@@ -204,7 +202,10 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
     protected function capture($order, $response)
     {
         $state = $order->getCurrentOrderState();
-        if ($state->id != Configuration::get('MPGS_OS_AUTHORIZED')) {
+        if (
+            $state->id != Configuration::get('MPGS_OS_AUTHORIZED') &&
+            $state->id != Configuration::get('MPGS_OS_PAYMENT_WAITING')
+        ) {
             $this->logger->warning(sprintf("Order state '%s' does not allow capture", $state->id), $this->getLoggerContext($response));
             return;
         }
@@ -213,19 +214,18 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
             $authTxnId = $this->module->findTxnId('auth', $order);
             $authTxn = $this->module->findTxn('auth', $order);
 
-            if (!$authTxnId) {
-                $this->logger->warning('Authorization transaction not found on this order');
-                return;
-            }
-
             $order->addOrderPayment(
                 $response['transaction']['amount'],
                 null,
                 'capture-' . $response['transaction']['id']
             );
 
-            // @todo: Deletes auth transaction, otherwise the payment would appear to be doubled
-            $authTxn->delete();
+            if ($authTxnId) {
+                // @todo: Deletes auth transaction, otherwise the payment would appear to be doubled
+                $authTxn->delete();
+            } else {
+                $this->logger->warning('Authorization transaction not found on this order');
+            }
 
             $newStatus = Configuration::get('PS_OS_PAYMENT');
             $history = new OrderHistory();
@@ -313,7 +313,6 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
         } catch (Exception $e) {
             $this->logger->critical('Void Error', array($this->getLoggerContext($response), $e));
             $this->emitServerError('Void Error');
-
         }
     }
 
@@ -323,6 +322,26 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
      */
     protected function authorize($order, $response)
     {
-        // noop
+        $state = $order->getCurrentOrderState();
+        if ($state->id != Configuration::get('MPGS_OS_PAYMENT_WAITING')) {
+            $this->logger->warning(sprintf("Order state '%s' does not allow authorization", $state->id), $this->getLoggerContext($response));
+            return;
+        }
+
+        try {
+            $order->addOrderPayment(
+                $response['transaction']['amount'],
+                null,
+                'auth-' . $response['transaction']['id']
+            );
+
+            $history = new OrderHistory();
+            $history->id_order = (int)$order->id;
+            $history->changeIdOrderState(Configuration::get('MPGS_OS_AUTHORIZED'), $order, true);
+            $history->addWithemail(true, array());
+        } catch (Exception $e) {
+            $this->logger->critical('Authorize Error', array($this->getLoggerContext($response), $e));
+            $this->emitServerError('Authorize Error');
+        }
     }
 }

@@ -49,13 +49,22 @@ class ApiLoggerPlugin implements Plugin
      */
     public function handleRequest(\Psr\Http\Message\RequestInterface $request, callable $next, callable $first)
     {
-        $this->logger->info(sprintf('Emit request: "%s"', $this->formatter->formatRequest($request)), ['request' => $request->getBody()]);
+        $reqBody = @json_decode($request->getBody(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $reqBody = $request->getBody();
+        }
+
+        $this->logger->info(sprintf('Emit request: "%s"', $this->formatter->formatRequest($request)), ['request' => $reqBody]);
 
         return $next($request)->then(function (ResponseInterface $response) use ($request) {
+            $body = @json_decode($response->getBody(), true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $body = $response->getBody();
+            }
             $this->logger->info(
                 sprintf('Receive response: "%s" for request: "%s"', $this->formatter->formatResponse($response), $this->formatter->formatRequest($request)),
                 [
-                    'response' => $response->getBody(),
+                    'response' => $body,
                 ]
             );
 
@@ -229,6 +238,21 @@ class GatewayService
     public function validateVoidResponse($data)
     {
         // @todo
+    }
+
+    /**
+     * @param $response
+     * @return bool
+     */
+    public function isApproved($response)
+    {
+        $gatewayCode = $response['response']['gatewayCode'];
+
+        if (!in_array($gatewayCode, array('APPROVED', 'APPROVED_AUTO'))) {
+            return false;
+        }
+
+        return true;
     }
 
 

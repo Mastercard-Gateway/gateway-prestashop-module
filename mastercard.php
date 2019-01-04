@@ -365,6 +365,7 @@ class Mastercard extends PaymentModule
 
             'mpgs_hs_active' => Tools::getValue('mpgs_hs_active', Configuration::get('mpgs_hs_active')),
             'mpgs_hs_title' => $hsTitle,
+            'mpgs_hs_payment_action' => Tools::getValue('mpgs_hs_payment_action', Configuration::get('mpgs_hs_payment_action')),
 
             'mpgs_mode' => Tools::getValue('mpgs_mode', Configuration::get('mpgs_mode')),
             'mpgs_api_url' => Tools::getValue('mpgs_api_url', Configuration::get('mpgs_api_url')),
@@ -497,6 +498,19 @@ class Mastercard extends PaymentModule
                         'name' => 'mpgs_hs_title',
                         'required' => true,
                         'lang' => true,
+                    ),
+                    array(
+                        'type' => 'select',
+                        'label' => $this->l('Payment Model'),
+                        'name' => 'mpgs_hs_payment_action',
+                        'options' => array(
+                            'query' => array(
+                                array('id' => 'PAY', 'name' => $this->l('Purchase (Pay)')),
+                                array('id' => 'AUTHCAPTURE', 'name' => $this->l('Authorize & Capture')),
+                            ),
+                            'id' => 'id',
+                            'name' => 'name',
+                        ),
                     ),
                 ),
                 'submit' => array(
@@ -639,6 +653,8 @@ class Mastercard extends PaymentModule
     /**
      * @param $params
      * @return string
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
      */
     public function hookDisplayAdminOrderLeft($params)
     {
@@ -723,13 +739,15 @@ class Mastercard extends PaymentModule
 
     /**
      * @return PaymentOption
+     * @throws SmartyException
      */
     protected function getHostedSessionPaymentOption()
     {
         $option = new PaymentOption();
         $option
             ->setModuleName($this->name . '_hs')
-            ->setCallToActionText(Configuration::get('mpgs_hs_title', $this->context->language->id));
+            ->setCallToActionText(Configuration::get('mpgs_hs_title', $this->context->language->id))
+            ->setAdditionalInformation($this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedsession.tpl'));
 
         return $option;
     }
@@ -745,7 +763,7 @@ class Mastercard extends PaymentModule
             ->setModuleName($this->name . '_hc')
             //$this->l('MasterCard Hosted Checkout', array(), 'Modules.Mastercard.Admin')
             ->setCallToActionText(Configuration::get('mpgs_hc_title', $this->context->language->id))
-            ->setAdditionalInformation($this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedcheckout.tpl'))
+            //->setAdditionalInformation($this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedcheckout.tpl'))
             ->setForm($this->generateHostedCheckoutForm());
 
         return $option;
