@@ -3,48 +3,10 @@
  * Copyright (c) On Tap Networks Limited.
  */
 
-class MastercardHostedCheckoutModuleFrontController extends ModuleFrontController
+require_once dirname(__FILE__) . '/abstract.php';
+
+class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractModuleFrontController
 {
-    /**
-     * @var GatewayService
-     */
-    protected $client;
-
-    /**
-     * @var Mastercard
-     */
-    public $module;
-
-    /**
-     * @throws PrestaShopException
-     * @throws Exception
-     */
-    public function init()
-    {
-        parent::init();
-
-        if (Context::getContext()->cart->id_customer == 0 ||
-            Context::getContext()->cart->id_address_delivery == 0 ||
-            Context::getContext()->cart->id_address_invoice == 0 ||
-            !$this->module->active
-        ) {
-            Tools::redirect('index.php?controller=order&step=1');
-        }
-
-        $customer = new Customer(Context::getContext()->cart->id_customer);
-        if (!Validate::isLoadedObject($customer)) {
-            Tools::redirect('index.php?controller=order&step=1');
-        }
-
-        $this->client = new GatewayService(
-            $this->module->getApiEndpoint(),
-            $this->module->getApiVersion(),
-            $this->module->getConfigValue('mpgs_merchant_id'),
-            $this->module->getConfigValue('mpgs_api_password'),
-            $this->module->getWebhookUrl()
-        );
-    }
-
     /**
      * @throws GatewayResponseException
      * @throws PrestaShopDatabaseException
@@ -81,7 +43,9 @@ class MastercardHostedCheckoutModuleFrontController extends ModuleFrontControlle
         );
 
         $customer = array(
-            'email' => GatewayService::safe(Context::getContext()->customer->email)
+            'email' => GatewayService::safe(Context::getContext()->customer->email),
+            'firstName' => GatewayService::safe(Context::getContext()->customer->firstname, 50),
+            'lastName' => GatewayService::safe(Context::getContext()->customer->lastname, 50),
         );
 
         $response = $this->client->createCheckoutSession(
@@ -121,12 +85,12 @@ class MastercardHostedCheckoutModuleFrontController extends ModuleFrontControlle
                 'session_id' => Tools::getValue('session_id'),
                 'session_version' => Tools::getValue('session_version'),
                 'success_indicator' => Tools::getValue('success_indicator'),
-                'checkout_component_url' => $this->module->getJsComponent(),
                 'merchant_id' => $this->module->getConfigValue('mpgs_merchant_id'),
                 'order_id' => (int)Context::getContext()->cart->id,
                 'amount' => Context::getContext()->cart->getOrderTotal(),
                 'currency' => Context::getContext()->currency->iso_code
             ),
+            'hostedcheckout_component_url' => $this->module->getHostedCheckoutJsComponent(),
         ));
         $this->setTemplate('module:mastercard/views/templates/front/methods/hostedcheckout/js.tpl');
     }
@@ -223,6 +187,10 @@ class MastercardHostedCheckoutModuleFrontController extends ModuleFrontControlle
      */
     public function postProcess()
     {
+        if (parent::postProcess()) {
+            return;
+        }
+
         if (Tools::getValue('cancel')) {
             $this->warning[] = $this->module->l('Payment was cancelled.');
             $this->redirectWithNotifications(Context::getContext()->link->getPageLink('cart', null, null, array(

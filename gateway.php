@@ -255,6 +255,63 @@ class GatewayService
         return true;
     }
 
+    /**
+     * Interprets the authentication response returned from the card Issuer's Access Control Server (ACS)
+     * after the cardholder completes the authentication process. The response indicates the success
+     * or otherwise of the authentication.
+     * The 3DS AuthId is required so that merchants can submit payloads multiple times
+     * without producing duplicates in the database.
+     * POST https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/3DSecureId/{3DSecureId}
+     *
+     * @param string $threeDSecureId
+     * @param string $paRes
+     * @return mixed|ResponseInterface
+     * @throws Exception
+     */
+    public function process3dsResult($threeDSecureId, $paRes)
+    {
+        $uri = $this->apiUrl . '3DSecureId/' . $threeDSecureId;
+
+        $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode(array(
+            'apiOperation' => 'PROCESS_ACS_RESULT',
+            '3DSecure' => array(
+                'paRes' => $paRes
+            )
+        )));
+
+        $response = $this->client->sendRequest($request);
+        $response = json_decode($response->getBody(), true);
+
+        return $response;
+    }
+
+    /**
+     * Request to check a cardholder's enrollment in the 3DSecure scheme.
+     * PUT https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/3DSecureId/{3DSecureId}
+     *
+     * @param array $data
+     * @param array $order
+     * @param array $session
+     * @return mixed|ResponseInterface
+     * @throws Exception
+     */
+    public function check3dsEnrollment($data, $order, $session)
+    {
+        $threeDSecureId = uniqid(sprintf('3DS-'));
+        $uri = $this->apiUrl . '3DSecureId/' . $threeDSecureId;
+
+        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
+            'apiOperation' => 'CHECK_3DS_ENROLLMENT',
+            '3DSecure' => $data,
+            'order' => $order,
+            'session' => $session,
+        )));
+
+        $response = $this->client->sendRequest($request);
+        $response = json_decode($response->getBody(), true);
+
+        return $response;
+    }
 
     /**
      * Create Checkout Session
@@ -298,11 +355,62 @@ class GatewayService
         )));
 
         $response = $this->client->sendRequest($request);
-
-
         $response = json_decode($response->getBody(), true);
 
         $this->validateCheckoutSessionResponse($response);
+
+        return $response;
+    }
+
+    /**
+     * Request to obtain an authorization for a proposed funds transfer.
+     * An authorization is a response from a financial institution indicating that payment information
+     * is valid and funds are available in the payers account.
+     * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
+     *
+     * @param string $orderId
+     * @param string $amount
+     * @param string $currency
+     * @param array $theeDSecure
+     * @param array $session
+     * @param array $customer
+     * @param array $billing
+     * @return mixed|ResponseInterface
+     * @throws Exception
+     */
+    public function authorize(
+        $orderId,
+        $amount,
+        $currency,
+        $theeDSecure = null,
+        $session = array(),
+        $customer = array(),
+        $billing = array()
+    ) {
+        $txnId = '1';
+        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
+
+        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
+            'apiOperation' => 'AUTHORIZE',
+            '3DSecure' => $theeDSecure,
+            'partnerSolutionId' => $this->getSolutionId(),
+            'order' => array(
+                'currency' => $currency,
+                'amount' => $amount,
+                'notificationUrl' => $this->webhookUrl
+            ),
+            'billing' => $billing,
+            'customer' => $customer,
+            'sourceOfFunds' => array(
+                'type' => 'CARD'
+            ),
+            'session' => $session,
+        )));
+
+        $response = $this->client->sendRequest($request);
+        $response = json_decode($response->getBody(), true);
+
+        $this->validateTxnResponse($response);
 
         return $response;
     }

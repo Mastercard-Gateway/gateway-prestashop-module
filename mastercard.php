@@ -18,6 +18,9 @@ class Mastercard extends PaymentModule
 {
     const MPGS_API_VERSION = '50';
 
+    const PAYMENT_ACTION_PAY = 'PAY';
+    const PAYMENT_ACTION_AUTHCAPTURE = 'AUTHCAPTURE';
+
     /**
      * @var string
      */
@@ -366,6 +369,7 @@ class Mastercard extends PaymentModule
             'mpgs_hs_active' => Tools::getValue('mpgs_hs_active', Configuration::get('mpgs_hs_active')),
             'mpgs_hs_title' => $hsTitle,
             'mpgs_hs_payment_action' => Tools::getValue('mpgs_hs_payment_action', Configuration::get('mpgs_hs_payment_action')),
+            'mpgs_hs_3ds' => Tools::getValue('mpgs_hs_3ds', Configuration::get('mpgs_hs_3ds')),
 
             'mpgs_mode' => Tools::getValue('mpgs_mode', Configuration::get('mpgs_mode')),
             'mpgs_api_url' => Tools::getValue('mpgs_api_url', Configuration::get('mpgs_api_url')),
@@ -505,11 +509,30 @@ class Mastercard extends PaymentModule
                         'name' => 'mpgs_hs_payment_action',
                         'options' => array(
                             'query' => array(
-                                array('id' => 'PAY', 'name' => $this->l('Purchase (Pay)')),
-                                array('id' => 'AUTHCAPTURE', 'name' => $this->l('Authorize & Capture')),
+                                array('id' => self::PAYMENT_ACTION_PAY, 'name' => $this->l('Purchase (Pay)')),
+                                array('id' => self::PAYMENT_ACTION_AUTHCAPTURE, 'name' => $this->l('Authorize & Capture')),
                             ),
                             'id' => 'id',
                             'name' => 'name',
+                        ),
+                    ),
+                    array(
+                        'type' => 'switch',
+                        'label' => $this->l('3D Secure'),
+                        'name' => 'mpgs_hs_3ds',
+                        'is_bool' => true,
+                        'desc' => '',
+                        'values' => array(
+                            array(
+                                'id' => 'active_on',
+                                'value' => false,
+                                'label' => $this->l('Enabled'),
+                            ),
+                            array(
+                                'id' => 'active_off',
+                                'value' => true,
+                                'label' => $this->l('Disabled'),
+                            )
                         ),
                     ),
                 ),
@@ -705,7 +728,6 @@ class Mastercard extends PaymentModule
                 'merchant_id' => $this->getConfigValue('mpgs_merchant_id'),
                 'amount' => $this->context->cart->getOrderTotal(),
                 'currency' => $this->context->currency->iso_code,
-                'checkout_component_url' => $this->getJsComponent(),
                 'order_id' => (int)$this->context->cart->id,
             ),
         ));
@@ -743,11 +765,14 @@ class Mastercard extends PaymentModule
      */
     protected function getHostedSessionPaymentOption()
     {
+        $form = $this->generateHostedSessionForm();
+
         $option = new PaymentOption();
         $option
             ->setModuleName($this->name . '_hs')
             ->setCallToActionText(Configuration::get('mpgs_hs_title', $this->context->language->id))
-            ->setAdditionalInformation($this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedsession.tpl'));
+            ->setAdditionalInformation($this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedsession.tpl'))
+            ->setForm($form);
 
         return $option;
     }
@@ -758,15 +783,31 @@ class Mastercard extends PaymentModule
      */
     protected function getHostedCheckoutPaymentOption()
     {
+        $form = $this->generateHostedCheckoutForm();
+
         $option = new PaymentOption();
         $option
             ->setModuleName($this->name . '_hc')
-            //$this->l('MasterCard Hosted Checkout', array(), 'Modules.Mastercard.Admin')
             ->setCallToActionText(Configuration::get('mpgs_hc_title', $this->context->language->id))
             //->setAdditionalInformation($this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedcheckout.tpl'))
-            ->setForm($this->generateHostedCheckoutForm());
+            ->setForm($form);
 
         return $option;
+    }
+
+    /**
+     * @return string
+     * @throws SmartyException
+     */
+    protected function generateHostedSessionForm()
+    {
+        $this->context->smarty->assign(array(
+            'hostedsession_action_url' => $this->context->link->getModuleLink($this->name, 'hostedsession', array(), true),
+            'hostedsession_component_url' => $this->getHostedSessionJsComponent(),
+            'hostedsession_3ds' => Configuration::get('mpgs_hs_3ds'),
+        ));
+
+        return $this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedsession/form.tpl');
     }
 
     /**
@@ -778,6 +819,7 @@ class Mastercard extends PaymentModule
         $this->context->smarty->assign(array(
             'hostedcheckout_action_url' => $this->context->link->getModuleLink($this->name, 'hostedcheckout', array(), true),
             'hostedcheckout_cancel_url' => $this->context->link->getModuleLink($this->name, 'hostedcheckout', array('cancel' => 1), true),
+            'hostedcheckout_component_url' => $this->getHostedCheckoutJsComponent(),
         ));
         return $this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedcheckout/form.tpl');
     }
@@ -803,11 +845,23 @@ class Mastercard extends PaymentModule
     /**
      * @return string
      * @throws Exception
+     * https://mtf.gateway.mastercard.com/checkout/version/50/checkout.js
      */
-    public function getJsComponent()
+    public function getHostedCheckoutJsComponent()
     {
         return 'https://'. $this->getApiEndpoint() . '/checkout/version/' . $this->getApiVersion() . '/checkout.js';
     }
+
+    /**
+     * @return string
+     * @throws Exception
+     * https://mtf.gateway.mastercard.com/form/version/50/merchant/<MERCHANTID>/session.js
+     */
+    public function getHostedSessionJsComponent()
+    {
+        return 'https://'. $this->getApiEndpoint() . '/form/version/' . $this->getApiVersion() . '/merchant/' . $this->getConfigValue('mpgs_merchant_id') . '/session.js';
+    }
+
 
     /**
      * @return string

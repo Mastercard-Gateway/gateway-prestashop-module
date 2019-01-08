@@ -1,5 +1,5 @@
 <form id="payment-form" method="POST" onsubmit="return payWithHostedCheckout()" action="{$hostedcheckout_action_url nofilter}"></form>
-<script src="{$mpgs_config.checkout_component_url}"
+<script src="{$hostedcheckout_component_url}"
         data-error="errorCallback"
         data-complete="completeCallback"
         data-cancel="cancelCallback">

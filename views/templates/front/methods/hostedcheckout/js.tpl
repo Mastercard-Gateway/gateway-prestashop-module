@@ -11,7 +11,7 @@
 
     <p><h2>{l s='Transaction in progress, please wait.' mod='mastercard'}</h2></p>
 
-    <script src="{$mpgs_config.checkout_component_url}"
+    <script src="{$hostedcheckout_component_url}"
             data-error="errorCallback"
             data-cancel="cancelCallback"
             data-beforeRedirect="beforeRedirect"
