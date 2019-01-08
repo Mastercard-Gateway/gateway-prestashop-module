@@ -68,7 +68,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
             if (!$paRes || !$threeDSecureId) {
                 $this->errors[] = $this->module->l('Payment error occurred (3D Secure).');
-                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('cart', null, null, array(
+                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
                     'action' => 'show'
                 )));
                 exit;
@@ -78,7 +78,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
                 $this->errors[] = $this->module->l('Your payment was declined by 3D Secure.');
-                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('cart', null, null, array(
+                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
                     'action' => 'show'
                 )));
                 exit;
@@ -99,7 +99,12 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             $threeD = array(
                 'authenticationRedirect' => array(
                     'pageGenerationMode' => 'CUSTOMIZED',
-                    'responseUrl' => $this->context->link->getModuleLink($this->module->name, Tools::getValue('controller'), array(), true)
+                    'responseUrl' => $this->context->link->getModuleLink(
+                        $this->module->name,
+                        Tools::getValue('controller'),
+                        array(),
+                        true
+                    )
                 )
             );
 
@@ -121,7 +126,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
                 $this->errors[] = $this->module->l('Your payment was declined.');
-                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('cart', null, null, array(
+                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
                     'action' => 'show'
                 )));
                 exit;

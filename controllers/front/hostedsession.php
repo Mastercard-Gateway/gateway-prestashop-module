@@ -90,8 +90,6 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
         $order = new Order((int)$this->module->currentOrder);
 
         $action = Configuration::get('mpgs_hs_payment_action');
-        $newStatus = false;
-        $response = array();
 
         if ($action === Mastercard::PAYMENT_ACTION_AUTHCAPTURE) {
             $response = $this->client->authorize(
@@ -118,11 +116,31 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
                 $newStatus = Configuration::get('PS_OS_ERROR');
             }
         } else if ($action === Mastercard::PAYMENT_ACTION_PAY) {
+            $response = $this->client->pay(
+                $cart->id,
+                GatewayService::numeric(
+                    $cart->getOrderTotal()
+                ),
+                $currency->iso_code,
+                $this->threeDSecureData ? : null,
+                $session,
+                $customerData,
+                $billing
+            );
 
-            //$this->client->pay();
+            if ($this->client->isApproved($response)) {
+                $order->addOrderPayment(
+                    $response['transaction']['amount'],
+                    null,
+                    'capture-' . $response['transaction']['id']
+                );
 
+                $newStatus = Configuration::get('PS_OS_PAYMENT');
+            } else {
+                $newStatus = Configuration::get('PS_OS_ERROR');
+            }
         } else {
-            throw new Exception('Unexpected Payment Action');
+            throw new Exception('Unexpected response from the Payment Gateway');
         }
 
         if ($newStatus) {

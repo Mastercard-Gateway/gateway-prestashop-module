@@ -416,6 +416,62 @@ class GatewayService
     }
 
     /**
+     * A single transaction to authorise the payment and transfer funds from the payer's account to your account.
+     *
+     * For card payments, Pay is a mode where the Authorize and Capture operations are completed at the same time.
+     * Pay is the most common type of payment model used by merchants to accept card payments.
+     * The Pay model is used when the merchant is allowed to bill the cardholder's account immediately,
+     * for example when providing services or goods on the spot.
+     * PUT https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
+     *
+     * @param string $orderId
+     * @param string $amount
+     * @param string $currency
+     * @param array $theeDSecure
+     * @param array $session
+     * @param array $customer
+     * @param array $billing
+     * @return mixed|ResponseInterface
+     * @throws Exception
+     */
+    public function pay(
+        $orderId,
+        $amount,
+        $currency,
+        $theeDSecure = null,
+        $session = array(),
+        $customer = array(),
+        $billing = array()
+    ) {
+        $txnId = '1';
+        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
+
+        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
+            'apiOperation' => 'PAY',
+            '3DSecure' => $theeDSecure,
+            'partnerSolutionId' => $this->getSolutionId(),
+            'order' => array(
+                'currency' => $currency,
+                'amount' => $amount,
+                'notificationUrl' => $this->webhookUrl
+            ),
+            'billing' => $billing,
+            'customer' => $customer,
+            'sourceOfFunds' => array(
+                'type' => 'CARD'
+            ),
+            'session' => $session,
+        )));
+
+        $response = $this->client->sendRequest($request);
+        $response = json_decode($response->getBody(), true);
+
+        $this->validateTxnResponse($response);
+
+        return $response;
+    }
+
+    /**
      * Retrieve order
      * Request to retrieve the details of an order and all transactions associated with this order.
      * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}
