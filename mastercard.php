@@ -365,6 +365,7 @@ class Mastercard extends PaymentModule
             'mpgs_hc_theme' => Tools::getValue('mpgs_hc_theme', Configuration::get('mpgs_hc_theme')),
             'mpgs_hc_show_billing' => Tools::getValue('mpgs_hc_show_billing', Configuration::get('mpgs_hc_show_billing')),
             'mpgs_hc_show_email' => Tools::getValue('mpgs_hc_show_email', Configuration::get('mpgs_hc_show_email')),
+            'mpgs_hc_ga_tracking_id' => Tools::getValue('mpgs_hc_ga_tracking_id', Configuration::get('mpgs_hc_ga_tracking_id')),
 
             'mpgs_hs_active' => Tools::getValue('mpgs_hs_active', Configuration::get('mpgs_hs_active')),
             'mpgs_hs_title' => $hsTitle,
@@ -374,6 +375,7 @@ class Mastercard extends PaymentModule
             'mpgs_mode' => Tools::getValue('mpgs_mode', Configuration::get('mpgs_mode')),
             'mpgs_api_url' => Tools::getValue('mpgs_api_url', Configuration::get('mpgs_api_url')),
             'mpgs_api_url_custom' => Tools::getValue('mpgs_api_url_custom', Configuration::get('mpgs_api_url_custom')),
+            'mpgs_lineitems_enabled' => Tools::getValue('mpgs_lineitems_enabled', Configuration::get('mpgs_lineitems_enabled')),
 
             'mpgs_merchant_id' => Tools::getValue('mpgs_merchant_id', Configuration::get('mpgs_merchant_id')),
             'mpgs_api_password' => Tools::getValue('mpgs_api_password', Configuration::get('mpgs_api_password')),
@@ -427,6 +429,12 @@ class Mastercard extends PaymentModule
                         'type' => 'text',
                         'label' => $this->l('Theme'),
                         'name' => 'mpgs_hc_theme',
+                        'required' => false
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Google Analytics Tracking ID'),
+                        'name' => 'mpgs_hc_ga_tracking_id',
                         'required' => false
                     ),
                     array(
@@ -597,6 +605,25 @@ class Mastercard extends PaymentModule
                         'label' => $this->l('Custom API Endpoint'),
                         'name' => 'mpgs_api_url_custom',
                         'required' => true
+                    ),
+                    array(
+                        'type' => 'switch',
+                        'label' => $this->l('Send Line Items'),
+                        'name' => 'mpgs_lineitems_enabled',
+                        'is_bool' => true,
+                        'desc' => '',
+                        'values' => array(
+                            array(
+                                'id' => 'active_on',
+                                'value' => false,
+                                'label' => $this->l('Enabled'),
+                            ),
+                            array(
+                                'id' => 'active_off',
+                                'value' => true,
+                                'label' => $this->l('Disabled'),
+                            )
+                        ),
                     ),
                     array(
                         'type' => 'text',
@@ -904,5 +931,66 @@ class Mastercard extends PaymentModule
             }
         }
         return false;
+    }
+
+    /**
+     * @return array|null
+     */
+    public function getOrderItems()
+    {
+        if (!Configuration::get('mpgs_lineitems_enabled')) {
+            return null;
+        }
+
+        $items = $this->context->cart->getProducts(false, false, $this->context->country->id, true);
+        $cartItems = array();
+
+        /** @var Product $item */
+        foreach ($items as $item) {
+            $cartItems[] = array(
+                'name' => GatewayService::safe($item['name'], 127),
+                'quantity' => GatewayService::numeric($item['cart_quantity']),
+                'sku' => GatewayService::safe($item['reference'], 127),
+                'unitPrice' => GatewayService::numeric($item['price_wt']),
+            );
+        }
+
+        return empty($cartItems) ? null : $cartItems;
+    }
+
+    /**
+     * @return string|null
+     * @throws Exception
+     */
+    public function getShippingHandlingAmount()
+    {
+        if (!Configuration::get('mpgs_lineitems_enabled')) {
+            return null;
+        }
+
+        $total = Context::getContext()->cart->getOrderTotal();
+
+        return GatewayService::numeric(
+            $total - (float)$this->getItemAmount()
+        );
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getItemAmount()
+    {
+        $items = $this->getOrderItems();
+
+        if (!$items) {
+            return null;
+        }
+
+        $amount = 0.0;
+        foreach ($items as $item) {
+            $amount += (float)$item['unitPrice'] * (float)$item['quantity'];
+        }
+
+        return GatewayService::numeric($amount);
     }
 }

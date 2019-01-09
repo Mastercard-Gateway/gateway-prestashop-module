@@ -56,6 +56,16 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             'version' => Tools::getValue('session_version'),
         );
 
+        $orderData = array(
+            'currency' => $currency->iso_code,
+            'amount' => GatewayService::numeric(
+                Context::getContext()->cart->getOrderTotal()
+            ),
+            'item' => $this->module->getOrderItems(),
+            'itemAmount' => $this->module->getItemAmount(),
+            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount(),
+        );
+
         $address = new Address(Context::getContext()->cart->id_address_invoice);
         $country = new Country($address->id_country);
         $billing = array(
@@ -94,10 +104,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
         if ($action === Mastercard::PAYMENT_ACTION_AUTHCAPTURE) {
             $response = $this->client->authorize(
                 $cart->id,
-                GatewayService::numeric(
-                    $cart->getOrderTotal()
-                ),
-                $currency->iso_code,
+                $orderData,
                 $this->threeDSecureData ? : null,
                 $session,
                 $customerData,
@@ -118,10 +125,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
         } else if ($action === Mastercard::PAYMENT_ACTION_PAY) {
             $response = $this->client->pay(
                 $cart->id,
-                GatewayService::numeric(
-                    $cart->getOrderTotal()
-                ),
-                $currency->iso_code,
+                $orderData,
                 $this->threeDSecureData ? : null,
                 $session,
                 $customerData,

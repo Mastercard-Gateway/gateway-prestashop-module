@@ -320,9 +320,7 @@ class GatewayService
      * allows you to return the payer to the merchant's website after completing the payment attempt.
      * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/session
      *
-     * @param string $orderId
-     * @param string $amount
-     * @param string $currency
+     * @param array $order
      * @param array $interaction
      * @param array $customer
      * @param array $billing
@@ -331,9 +329,7 @@ class GatewayService
      * @throws GatewayResponseException
      */
     public function createCheckoutSession(
-        $orderId,
-        $amount,
-        $currency,
+        $order = array(),
         $interaction = array(),
         $customer = array(),
         $billing = array()
@@ -343,12 +339,9 @@ class GatewayService
         $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode(array(
             'apiOperation' => 'CREATE_CHECKOUT_SESSION',
             'partnerSolutionId' => $this->getSolutionId(),
-            'order' => array(
-                'id' => $orderId,
-                'currency' => $currency,
-                'amount' => $amount,
+            'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
-            ),
+            )),
             'billing' => $billing,
             'interaction' => $interaction,
             'customer' => $customer,
@@ -369,8 +362,7 @@ class GatewayService
      * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
      * @param string $orderId
-     * @param string $amount
-     * @param string $currency
+     * @param array $order
      * @param array $theeDSecure
      * @param array $session
      * @param array $customer
@@ -380,8 +372,7 @@ class GatewayService
      */
     public function authorize(
         $orderId,
-        $amount,
-        $currency,
+        $order,
         $theeDSecure = null,
         $session = array(),
         $customer = array(),
@@ -394,11 +385,9 @@ class GatewayService
             'apiOperation' => 'AUTHORIZE',
             '3DSecure' => $theeDSecure,
             'partnerSolutionId' => $this->getSolutionId(),
-            'order' => array(
-                'currency' => $currency,
-                'amount' => $amount,
+            'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
-            ),
+            )),
             'billing' => $billing,
             'customer' => $customer,
             'sourceOfFunds' => array(
@@ -425,8 +414,7 @@ class GatewayService
      * PUT https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
      * @param string $orderId
-     * @param string $amount
-     * @param string $currency
+     * @param array $order
      * @param array $theeDSecure
      * @param array $session
      * @param array $customer
@@ -436,8 +424,7 @@ class GatewayService
      */
     public function pay(
         $orderId,
-        $amount,
-        $currency,
+        $order = array(),
         $theeDSecure = null,
         $session = array(),
         $customer = array(),
@@ -450,11 +437,9 @@ class GatewayService
             'apiOperation' => 'PAY',
             '3DSecure' => $theeDSecure,
             'partnerSolutionId' => $this->getSolutionId(),
-            'order' => array(
-                'currency' => $currency,
-                'amount' => $amount,
+            'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
-            ),
+            )),
             'billing' => $billing,
             'customer' => $customer,
             'sourceOfFunds' => array(

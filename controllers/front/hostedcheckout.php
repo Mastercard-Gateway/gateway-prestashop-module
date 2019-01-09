@@ -17,6 +17,17 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
     {
         $orderId = (int)Context::getContext()->cart->id;
 
+        $order = array(
+            'id' => $orderId,
+            'currency' => Context::getContext()->currency->iso_code,
+            'amount' => GatewayService::numeric(
+                Context::getContext()->cart->getOrderTotal()
+            ),
+            'item' => $this->module->getOrderItems(),
+            'itemAmount' => $this->module->getItemAmount(),
+            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount(),
+        );
+
         $interaction = array(
             'theme' => GatewayService::safe(Configuration::get('mpgs_hc_theme')),
             'displayControl' => array(
@@ -24,6 +35,9 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
                 'orderSummary' => 'HIDE',
                 'billingAddress' => GatewayService::safe(Configuration::get('mpgs_hc_show_billing')),
                 'customerEmail' => GatewayService::safe(Configuration::get('mpgs_hc_show_email')),
+            ),
+            'googleAnalytics' => array(
+                'propertyId' => Configuration::get('mpgs_hc_ga_tracking_id')?:null,
             ),
             'merchant' => array(
                 'name' => GatewayService::safe(Context::getContext()->shop->name, 40),
@@ -49,11 +63,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
         );
 
         $response = $this->client->createCheckoutSession(
-            $orderId,
-            GatewayService::numeric(
-                Context::getContext()->cart->getOrderTotal()
-            ),
-            Context::getContext()->currency->iso_code,
+            $order,
             $interaction,
             $customer,
             $billing
