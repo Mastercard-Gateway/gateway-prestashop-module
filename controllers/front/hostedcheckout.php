@@ -32,7 +32,6 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
             'theme' => GatewayService::safe(Configuration::get('mpgs_hc_theme')),
             'displayControl' => array(
                 'shipping' => 'HIDE',
-                'orderSummary' => 'HIDE',
                 'billingAddress' => GatewayService::safe(Configuration::get('mpgs_hc_show_billing')),
                 'customerEmail' => GatewayService::safe(Configuration::get('mpgs_hc_show_email')),
                 'orderSummary' => GatewayService::safe(Configuration::get('mpgs_hc_show_summary')),
