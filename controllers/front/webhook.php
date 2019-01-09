@@ -97,6 +97,7 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
 
     /**
      * @inheritdoc
+     * @throws \Http\Client\Exception
      */
     public function postProcess()
     {
@@ -160,6 +161,7 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
             exit;
         }
 
+        /** @var Order $order */
         $order = Order::getByCartId($response['order']['id']);
 
         switch ($response['transaction']['type']) {

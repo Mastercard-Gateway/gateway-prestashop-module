@@ -12,6 +12,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
      * @throws PrestaShopDatabaseException
      * @throws PrestaShopException
      * @throws \Http\Client\Exception
+     * @throws Exception
      */
     protected function createSessionAndRedirect()
     {
@@ -87,6 +88,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
 
     /**
      * @throws PrestaShopException
+     * @throws Exception
      */
     protected function showPaymentPage()
     {
@@ -108,6 +110,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
     /**
      * @throws \Http\Client\Exception
      * @throws PrestaShopException
+     * @throws Exception
      */
     protected function createOrderAndRedirect()
     {

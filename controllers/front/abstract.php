@@ -57,6 +57,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
      * @return bool
      * @throws PrestaShopException
      * @throws \Http\Client\Exception
+     * @throws Exception
      */
     public function postProcess()
     {

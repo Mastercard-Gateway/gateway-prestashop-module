@@ -14,6 +14,9 @@ define('MPGS_ISO3_COUNTRIES', include dirname(__FILE__).'/iso3.php');
 require_once(dirname(__FILE__) . '/vendor/autoload.php');
 require_once(dirname(__FILE__) . '/gateway.php');
 
+/**
+ * @property bool bootstrap
+ */
 class Mastercard extends PaymentModule
 {
     const MPGS_API_VERSION = '50';
@@ -93,6 +96,7 @@ class Mastercard extends PaymentModule
     /**
      * Don't forget to create update methods if needed:
      * http://doc.prestashop.com/display/PS16/Enabling+the+Auto-Update
+     * @throws Exception
      */
     public function install()
     {
@@ -119,6 +123,8 @@ class Mastercard extends PaymentModule
 
     /**
      * @return bool
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
      */
     public function uninstall()
     {
@@ -147,6 +153,8 @@ class Mastercard extends PaymentModule
 
     /**
      * @return int
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
      */
     private function installTab()
     {
@@ -165,6 +173,8 @@ class Mastercard extends PaymentModule
 
     /**
      * @return bool
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
      */
     private function uninstallTab()
     {
@@ -173,10 +183,13 @@ class Mastercard extends PaymentModule
         if (Validate::isLoadedObject($tab)) {
             return $tab->delete();
         }
+        return true;
     }
 
     /**
      * @return bool
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
      */
     public function installOrderState()
     {
@@ -231,6 +244,7 @@ class Mastercard extends PaymentModule
 
     /**
      * @return string
+     * @throws PrestaShopException
      */
     public function getContent()
     {
@@ -293,6 +307,7 @@ class Mastercard extends PaymentModule
 
     /**
      * Create the form that will be displayed in the configuration of your module.
+     * @throws PrestaShopException
      */
     protected function renderForm()
     {
@@ -408,15 +423,15 @@ class Mastercard extends PaymentModule
                         'desc' => '',
                         'values' => array(
                             array(
+                                'id' => 'active_off',
+                                'value' => true,
+                                'label' => $this->l('Disabled'),
+                            ),
+                            array(
                                 'id' => 'active_on',
                                 'value' => false,
                                 'label' => $this->l('Enabled'),
                             ),
-                            array(
-                                'id' => 'active_off',
-                                'value' => true,
-                                'label' => $this->l('Disabled'),
-                            )
                         ),
                     ),
                     array(
@@ -508,15 +523,15 @@ class Mastercard extends PaymentModule
                         'desc' => '',
                         'values' => array(
                             array(
+                                'id' => 'active_off',
+                                'value' => true,
+                                'label' => $this->l('Disabled'),
+                            ),
+                            array(
                                 'id' => 'active_on',
                                 'value' => false,
                                 'label' => $this->l('Enabled'),
                             ),
-                            array(
-                                'id' => 'active_off',
-                                'value' => true,
-                                'label' => $this->l('Disabled'),
-                            )
                         ),
                     ),
                     array(
@@ -547,15 +562,15 @@ class Mastercard extends PaymentModule
                         'desc' => '',
                         'values' => array(
                             array(
+                                'id' => 'active_off',
+                                'value' => true,
+                                'label' => $this->l('Disabled'),
+                            ),
+                            array(
                                 'id' => 'active_on',
                                 'value' => false,
                                 'label' => $this->l('Enabled'),
                             ),
-                            array(
-                                'id' => 'active_off',
-                                'value' => true,
-                                'label' => $this->l('Disabled'),
-                            )
                         ),
                     ),
                 ),
@@ -591,21 +606,21 @@ class Mastercard extends PaymentModule
                 'input' => array(
                     array(
                         'type' => 'switch',
-                        'label' => $this->l('Live mode'),
+                        'label' => $this->l('Live Mode'),
                         'name' => 'mpgs_mode',
                         'is_bool' => true,
-                        'desc' => $this->l('Use this module in live mode'),
+                        'desc' => '',
                         'values' => array(
+                            array(
+                                'id' => 'active_off',
+                                'value' => true,
+                                'label' => $this->l('Disabled'),
+                            ),
                             array(
                                 'id' => 'active_on',
                                 'value' => false,
                                 'label' => $this->l('Enabled'),
                             ),
-                            array(
-                                'id' => 'active_off',
-                                'value' => true,
-                                'label' => $this->l('Disabled'),
-                            )
                         ),
                     ),
                     array(
@@ -629,15 +644,15 @@ class Mastercard extends PaymentModule
                         'desc' => '',
                         'values' => array(
                             array(
+                                'id' => 'active_off',
+                                'value' => true,
+                                'label' => $this->l('Disabled'),
+                            ),
+                            array(
                                 'id' => 'active_on',
                                 'value' => false,
                                 'label' => $this->l('Enabled'),
                             ),
-                            array(
-                                'id' => 'active_off',
-                                'value' => true,
-                                'label' => $this->l('Disabled'),
-                            )
                         ),
                     ),
                     array(
@@ -754,12 +769,11 @@ class Mastercard extends PaymentModule
     }
 
     /**
-     * @param $params
      * @return array
      * @throws SmartyException
      * @throws Exception
      */
-    public function hookPaymentOptions($params)
+    public function hookPaymentOptions()
     {
         if (!$this->active) {
             return array();
@@ -840,6 +854,7 @@ class Mastercard extends PaymentModule
     /**
      * @return string
      * @throws SmartyException
+     * @throws Exception
      */
     protected function generateHostedSessionForm()
     {
@@ -855,6 +870,7 @@ class Mastercard extends PaymentModule
     /**
      * @return string
      * @throws SmartyException
+     * @throws Exception
      */
     protected function generateHostedCheckoutForm()
     {
@@ -929,8 +945,13 @@ class Mastercard extends PaymentModule
             return $authTxn;
         }
 
-        list($mark, $txnId) = explode('-', $authTxn->transaction_id, 2);
-        return $txnId;
+        $txnArr = explode('-', $authTxn->transaction_id, 2);
+
+        if (!isset($txnArr[1])) {
+            return false;
+        }
+
+        return $txnArr[1];
     }
 
     /**
