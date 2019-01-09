@@ -365,6 +365,7 @@ class Mastercard extends PaymentModule
             'mpgs_hc_theme' => Tools::getValue('mpgs_hc_theme', Configuration::get('mpgs_hc_theme')),
             'mpgs_hc_show_billing' => Tools::getValue('mpgs_hc_show_billing', Configuration::get('mpgs_hc_show_billing')),
             'mpgs_hc_show_email' => Tools::getValue('mpgs_hc_show_email', Configuration::get('mpgs_hc_show_email')),
+            'mpgs_hc_show_summary' => Tools::getValue('mpgs_hc_show_summary', Configuration::get('mpgs_hc_show_summary')),
             'mpgs_hc_ga_tracking_id' => Tools::getValue('mpgs_hc_ga_tracking_id', Configuration::get('mpgs_hc_ga_tracking_id')),
 
             'mpgs_hs_active' => Tools::getValue('mpgs_hs_active', Configuration::get('mpgs_hs_active')),
@@ -443,9 +444,9 @@ class Mastercard extends PaymentModule
                         'name' => 'mpgs_hc_show_billing',
                         'options' => array(
                             'query' => array(
-                                array('id' => 'HIDE', 'name' => 'Hide'),
-                                array('id' => 'MANDATORY', 'name' => 'Mandatory'),
-                                array('id' => 'OPTIONAL', 'name' => 'Optional'),
+                                array('id' => 'HIDE', 'name' => $this->l('Hide')),
+                                array('id' => 'MANDATORY', 'name' => $this->l('Mandatory')),
+                                array('id' => 'OPTIONAL', 'name' => $this->l('Optional')),
                             ),
                             'id' => 'id',
                             'name' => 'name',
@@ -457,9 +458,23 @@ class Mastercard extends PaymentModule
                         'name' => 'mpgs_hc_show_email',
                         'options' => array(
                             'query' => array(
-                                array('id' => 'HIDE', 'name' => 'Hide'),
-                                array('id' => 'MANDATORY', 'name' => 'Mandatory'),
-                                array('id' => 'OPTIONAL', 'name' => 'Optional'),
+                                array('id' => 'HIDE', 'name' => $this->l('Hide')),
+                                array('id' => 'MANDATORY', 'name' => $this->l('Mandatory')),
+                                array('id' => 'OPTIONAL', 'name' => $this->l('Optional')),
+                            ),
+                            'id' => 'id',
+                            'name' => 'name',
+                        ),
+                    ),
+                    array(
+                        'type' => 'select',
+                        'label' => $this->l('Order Summary display'),
+                        'name' => 'mpgs_hc_show_summary',
+                        'options' => array(
+                            'query' => array(
+                                array('id' => 'HIDE', 'name' => $this->l('Hide')),
+                                array('id' => 'SHOW', 'name' => $this->l('Show')),
+                                array('id' => 'SHOW_PARTIAL', 'name' => $this->l('Show (without payment details)')),
                             ),
                             'id' => 'id',
                             'name' => 'name',
