@@ -53,7 +53,6 @@ class ResponseProcessor
             try {
                 $handler
                     ->setProcessor($this)
-                    ->setModule($this->module)
                     ->handle($order, $response);
             }  catch (Exception $e) {
                 $this->logger->critical('Payment Handler Exception', array('exception' => $e));
@@ -70,11 +69,6 @@ class ResponseProcessor
 abstract class ResponseHandler
 {
     /**
-     * @var Module
-     */
-    protected $module;
-
-    /**
      * @var ResponseProcessor
      */
     protected $processor;
@@ -86,15 +80,6 @@ abstract class ResponseHandler
      */
     abstract public function handle($order, $response);
 
-    /**
-     * @param Module $module
-     * @return $this
-     */
-    public function setModule($module)
-    {
-        $this->module = $module;
-        return $this;
-    }
 
     /**
      * @param ResponseProcessor $processor
@@ -205,7 +190,7 @@ class TransactionResponseHandler extends ResponseHandler
     public function handle($order, $response)
     {
         if ($response['result'] != 'SUCCESS') {
-            throw new MasterCardPaymentException($this->module->l('The operation was declined.'));
+            throw new MasterCardPaymentException($this->processor->module->l('The operation was declined.'));
         }
     }
 }
@@ -236,7 +221,7 @@ class OrderStatusResponseHandler extends ResponseHandler
             return;
         }
 
-        $newStatus = Configuration::get('PS_OS_ERROR');
+        $newStatus = null;
 
         if ($response['status'] == "AUTHORIZED") {
             $newStatus = Configuration::get('MPGS_OS_AUTHORIZED');
@@ -246,12 +231,22 @@ class OrderStatusResponseHandler extends ResponseHandler
             $newStatus = Configuration::get('PS_OS_PAYMENT');
         }
 
-        if ($response['status'] == 'VOID_AUTHORIZATION') {
+        if ($response['status'] == 'VOID_AUTHORIZATION' || $response['status'] == 'CANCELLED') {
             $newStatus = Configuration::get('PS_OS_CANCELED');
         }
 
         if ($response['status'] == 'REFUNDED') {
             $newStatus = Configuration::get('PS_OS_REFUND');
+        }
+
+        if (!$newStatus) {
+            $newStatus = Configuration::get('PS_OS_ERROR');
+            $this->processor->logger->error(
+                'Unexpected response status "' . $response['status'] . '"',
+                array(
+                    'response' => $response
+                )
+            );
         }
 
         $history = new OrderHistory();
@@ -269,7 +264,9 @@ class TransactionStatusResponseHandler extends ResponseHandler
     public function handle($order, $response)
     {
         $orderStatusHandler = new OrderStatusResponseHandler();
-        $orderStatusHandler->handle($order, $response['order']);
+        $orderStatusHandler
+            ->setProcessor($this->processor)
+            ->handle($order, $response['order']);
     }
 }
 
@@ -315,10 +312,14 @@ class OrderPaymentResponseHandler extends ResponseHandler
         foreach ($response['transaction'] as $txn) {
             if ($txn['transaction']['type'] == 'AUTHORIZATION') {
                 $handler = new AuthorizationResponseHandler();
-                $handler->handle($order, $txn);
+                $handler
+                    ->setProcessor($this->processor)
+                    ->handle($order, $txn);
             } else if ($txn['transaction']['type'] == 'CAPTURE' || $txn['transaction']['type'] == 'PAYMENT') {
                 $handler = new CaptureResponseHandler();
-                $handler->handle($order, $txn);
+                $handler
+                    ->setProcessor($this->processor)
+                    ->handle($order, $txn);
             } else {
                 throw new MasterCardPaymentException('Unknown transaction status ' . $txn['transaction']['type']);
             }

@@ -377,6 +377,7 @@ class Mastercard extends PaymentModule
             $this->getAdminGeneralSettingsForm(),
             $this->getAdminHostedCheckoutForm(),
             $this->getAdminHostedSessionForm(),
+            $this->getAdminAdvancedSettingForm(),
         ));
     }
 
@@ -431,6 +432,7 @@ class Mastercard extends PaymentModule
             'mpgs_hs_3ds' => Tools::getValue('mpgs_hs_3ds', Configuration::get('mpgs_hs_3ds')),
 
             'mpgs_mode' => Tools::getValue('mpgs_mode', Configuration::get('mpgs_mode')),
+            'mpgs_order_prefix' => Tools::getValue('mpgs_order_prefix', Configuration::get('mpgs_order_prefix')),
             'mpgs_api_url' => Tools::getValue('mpgs_api_url', Configuration::get('mpgs_api_url')),
             'mpgs_api_url_custom' => Tools::getValue('mpgs_api_url_custom', Configuration::get('mpgs_api_url_custom')),
             'mpgs_lineitems_enabled' => Tools::getValue('mpgs_lineitems_enabled', Configuration::get('mpgs_lineitems_enabled')),
@@ -742,6 +744,34 @@ class Mastercard extends PaymentModule
     }
 
     /**
+     * @return array
+     */
+    protected function getAdminAdvancedSettingForm()
+    {
+        return array(
+            'form' => array(
+                'legend' => array(
+                    'title' => $this->l('Advanced Parameters'),
+                    'icon' => 'icon-cogs',
+                ),
+                'input' => array(
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Order ID prefix'),
+                        'desc' => $this->l('Should be specified in case multiple integrations use the same Merchant ID'),
+                        'name' => 'mpgs_order_prefix',
+                        'required' => false
+                    ),
+
+                ),
+                'submit' => array(
+                    'title' => $this->l('Save'),
+                ),
+            )
+        );
+    }
+
+    /**
      * Save form data.
      */
     protected function postProcess()
@@ -800,6 +830,7 @@ class Mastercard extends PaymentModule
         $this->smarty->assign(array(
             'module_dir' => $this->_path,
             'order' => $order,
+            'mpgs_order_ref' => $this->getOrderRef($order),
             'can_void' => $canVoid,
             'can_capture' => $canCapture,
             'can_refund' => $canRefund,
@@ -829,7 +860,7 @@ class Mastercard extends PaymentModule
                 'merchant_id' => $this->getConfigValue('mpgs_merchant_id'),
                 'amount' => $this->context->cart->getOrderTotal(),
                 'currency' => $this->context->currency->iso_code,
-                'order_id' => (int)$this->context->cart->id,
+                'order_id' => $this->getNewOrderRef(),
             ),
         ));
 
@@ -1014,6 +1045,29 @@ class Mastercard extends PaymentModule
 //        }
 //        return false;
 //    }
+
+    /**
+     * @param Order $order
+     * @return string
+     */
+    public function getOrderRef($order)
+    {
+        $cartId = (string) $order->id_cart;
+        $prefix = Configuration::get('mpgs_order_prefix')?:'';
+
+        return $prefix . $cartId;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNewOrderRef()
+    {
+        $cartId = (string) Context::getContext()->cart->id;
+        $prefix = Configuration::get('mpgs_order_prefix')?:'';
+
+        return $prefix . $cartId;
+    }
 
     /**
      * @param Order $order

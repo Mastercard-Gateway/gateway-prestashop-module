@@ -103,7 +103,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
 
         if ($action === Mastercard::PAYMENT_ACTION_AUTHCAPTURE) {
             $response = $this->client->authorize(
-                $cart->id,
+                $this->module->getNewOrderRef(),
                 $orderData,
                 $this->threeDSecureData ? : null,
                 $session,
@@ -120,7 +120,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
 
         } else if ($action === Mastercard::PAYMENT_ACTION_PAY) {
             $response = $this->client->pay(
-                $cart->id,
+                $this->module->getNewOrderRef(),
                 $orderData,
                 $this->threeDSecureData ? : null,
                 $session,

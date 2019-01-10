@@ -5,7 +5,7 @@
         {l s='MasterCard Payment Actions (Online)' mod='mastercard'}
     </div>
     <div>
-        <h4>Order Reference Number: TODO</h4>
+        <h4>Order Reference Number: {$mpgs_order_ref}</h4>
         {if $can_review}
             <p>{l s='This order has been marked to require payment review. Please review the order at the Payment Gateway Administration.' mod='mastercard'}</p>
         {/if}

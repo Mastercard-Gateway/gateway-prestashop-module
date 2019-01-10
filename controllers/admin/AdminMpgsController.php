@@ -73,14 +73,14 @@ class AdminMpgsController extends ModuleAdminController
      */
     protected function voidAction($order)
     {
-        $txnData = $this->client->getAuthorizationTransaction($order->id_cart);
+        $txnData = $this->client->getAuthorizationTransaction($this->module->getOrderRef($order));
         $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
 
         if (!$txn) {
             throw new Exception('Authorization transaction not found.');
         }
 
-        $response = $this->client->voidTxn($order->id_cart, $txn->transaction_id);
+        $response = $this->client->voidTxn($this->module->getOrderRef($order), $txn->transaction_id);
 
         $processor = new ResponseProcessor($this->module);
         $processor->handle($order, $response, array(
@@ -98,7 +98,7 @@ class AdminMpgsController extends ModuleAdminController
      */
     protected function captureAction($order)
     {
-        $txnData = $this->client->getAuthorizationTransaction($order->id_cart);
+        $txnData = $this->client->getAuthorizationTransaction($this->module->getOrderRef($order));
         $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
 
         if (!$txn) {
@@ -108,7 +108,7 @@ class AdminMpgsController extends ModuleAdminController
         $currency = Currency::getCurrency($txn->id_currency);
 
         $response = $this->client->captureTxn(
-            $order->id_cart,
+            $this->module->getOrderRef($order),
             $txn->transaction_id,
             $txn->amount,
             $currency['iso_code']
@@ -131,7 +131,7 @@ class AdminMpgsController extends ModuleAdminController
      */
     protected function refundAction($order)
     {
-        $txnData = $this->client->getCaptureTransaction($order->id_cart);
+        $txnData = $this->client->getCaptureTransaction($this->module->getOrderRef($order));
         $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
 
         if (!$txn) {
@@ -141,7 +141,7 @@ class AdminMpgsController extends ModuleAdminController
         $currency = Currency::getCurrency($txn->id_currency);
 
         $response = $this->client->refund(
-            $order->id_cart,
+            $this->module->getOrderRef($order),
             $txn->transaction_id,
             $txn->amount,
             $currency['iso_code']
