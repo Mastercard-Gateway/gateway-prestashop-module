@@ -5,6 +5,7 @@
 
 require_once(dirname(__FILE__) . '/../../vendor/autoload.php');
 require_once(dirname(__FILE__) . '/../../gateway.php');
+require_once(dirname(__FILE__) . '/../../handlers.php');
 
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;

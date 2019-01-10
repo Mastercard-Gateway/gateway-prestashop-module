@@ -5,6 +5,8 @@
 
 require_once(dirname(__FILE__) . '/../../vendor/autoload.php');
 require_once(dirname(__FILE__) . '/../../gateway.php');
+require_once(dirname(__FILE__) . '/../../handlers.php');
+
 
 class AdminMpgsController extends ModuleAdminController
 {

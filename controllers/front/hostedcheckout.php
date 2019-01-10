@@ -145,47 +145,18 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
 
         $order = new Order((int)$this->module->currentOrder);
 
-        foreach ($response['transaction'] as $txn) {
-            if ($txn['result'] != 'SUCCESS') {
-                continue;
-            }
-            if ($txn['transaction']['type'] == 'AUTHORIZATION') {
-                if (!$this->client->isApproved($txn)) {
-                    throw new Exception('Transaction not approved by the gateway');
-                }
-                $order->addOrderPayment(
-                    $txn['transaction']['amount'],
-                    null,
-                    'auth-' . $txn['transaction']['id']
-                );
-            } else if ($txn['transaction']['type'] == 'CAPTURE' || $txn['transaction']['type'] == 'PAYMENT') {
-                if (!$this->client->isApproved($txn)) {
-                    throw new Exception('Transaction not approved by the gateway');
-                }
-                $order->addOrderPayment(
-                    $txn['transaction']['amount'],
-                    null,
-                    'capture-' . $txn['transaction']['id']
-                );
-            } else {
-                throw new Exception('Unknown transaction status '.$txn['transaction']['type']);
-            }
-        }
+        $processor = new ResponseProcessor($this->module);
 
-        $newStatus = null;
-        if ($response['status'] == "AUTHORIZED") {
-            $newStatus = Configuration::get('MPGS_OS_AUTHORIZED');
-        }
-
-        if ($response['status'] == "CAPTURED") {
-            $newStatus = Configuration::get('PS_OS_PAYMENT');
-        }
-
-        if ($newStatus) {
-            $history = new OrderHistory();
-            $history->id_order = (int)$order->id;
-            $history->changeIdOrderState($newStatus, $order, true);
-            $history->addWithemail(true, array());
+        try {
+            $processor->handle($order, $response, array(
+                new OrderPaymentResponseHandler(),
+                new RiskResponseHandler(),
+                new OrderStatusResponseHandler(),
+            ));
+        } catch (Exception $e) {
+            $this->errors[] = $this->module->l('Payment Error');
+            $this->errors[] = $e->getMessage();
+            $this->redirectWithNotifications('index.php?controller=order&step=1');
         }
 
         Tools::redirect(

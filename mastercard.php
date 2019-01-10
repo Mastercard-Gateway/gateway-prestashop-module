@@ -13,6 +13,7 @@ define('MPGS_ISO3_COUNTRIES', include dirname(__FILE__).'/iso3.php');
 
 require_once(dirname(__FILE__) . '/vendor/autoload.php');
 require_once(dirname(__FILE__) . '/gateway.php');
+require_once(dirname(__FILE__) . '/handlers.php');
 
 /**
  * @property bool bootstrap
@@ -238,7 +239,49 @@ class Mastercard extends PaymentModule
 
             Configuration::updateValue('MPGS_OS_AUTHORIZED', (int) $order_state->id);
         }
+        if (!Configuration::get('MPGS_OS_REVIEW_REQUIRED')
+            || !Validate::isLoadedObject(new OrderState(Configuration::get('MPGS_OS_REVIEW_REQUIRED')))) {
 
+            $order_state = new OrderState();
+            foreach (Language::getLanguages() as $language) {
+                $order_state->name[$language['id_lang']] = 'Payment Review Required';
+            }
+            $order_state->send_email = false;
+            $order_state->color = '#4169E1';
+            $order_state->hidden = false;
+            $order_state->delivery = false;
+            $order_state->logable = false;
+            $order_state->invoice = false;
+            $order_state->paid = false;
+            if ($order_state->add()) {
+                $source = _PS_ROOT_DIR_.'/img/os/10.gif';
+                $destination = _PS_ROOT_DIR_.'/img/os/'.(int) $order_state->id.'.gif';
+                copy($source, $destination);
+            }
+
+            Configuration::updateValue('MPGS_OS_FRAUD', (int) $order_state->id);
+        }
+        if (!Configuration::get('MPGS_OS_FRAUD')
+            || !Validate::isLoadedObject(new OrderState(Configuration::get('MPGS_OS_FRAUD')))) {
+
+            $order_state = new OrderState();
+            foreach (Language::getLanguages() as $language) {
+                $order_state->name[$language['id_lang']] = 'Suspected Fraud';
+            }
+            $order_state->send_email = false;
+            $order_state->color = '#DC143C';
+            $order_state->hidden = false;
+            $order_state->delivery = false;
+            $order_state->logable = false;
+            $order_state->invoice = false;
+            $order_state->paid = false;
+            if ($order_state->add()) {
+                $source = _PS_ROOT_DIR_.'/img/os/6.gif';
+                $destination = _PS_ROOT_DIR_.'/img/os/'.(int) $order_state->id.'.gif';
+                copy($source, $destination);
+            }
+            Configuration::updateValue('MPGS_OS_FRAUD', (int) $order_state->id);
+        }
         return true;
     }
 
@@ -251,7 +294,6 @@ class Mastercard extends PaymentModule
         /**
          * If values have been submitted in the form, process.
          */
-
         if (((bool)Tools::isSubmit('submitMastercardModule')) == true) {
             $this->_postValidation();
             if (!count($this->_postErrors)) {

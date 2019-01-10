@@ -111,17 +111,13 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
                 $billing
             );
 
-            if ($this->client->isApproved($response)) {
-                $order->addOrderPayment(
-                    $response['transaction']['amount'],
-                    null,
-                    'auth-' . $response['transaction']['id']
-                );
+            $processor = new ResponseProcessor($this->module);
+            $processor->handle($order, $response, array(
+                new AuthorizationResponseHandler(),
+                new RiskResponseHandler(),
+                new TransactionStatusResponseHandler(),
+            ));
 
-                $newStatus = Configuration::get('MPGS_OS_AUTHORIZED');
-            } else {
-                $newStatus = Configuration::get('PS_OS_ERROR');
-            }
         } else if ($action === Mastercard::PAYMENT_ACTION_PAY) {
             $response = $this->client->pay(
                 $cart->id,
@@ -132,30 +128,14 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
                 $billing
             );
 
-            if ($this->client->isApproved($response)) {
-                $order->addOrderPayment(
-                    $response['transaction']['amount'],
-                    null,
-                    'capture-' . $response['transaction']['id']
-                );
+            $processor = new ResponseProcessor($this->module);
+            $processor->handle($order, $response, array(
+                new CaptureResponseHandler(),
+                new OrderStatusResponseHandler(),
+            ));
 
-                $newStatus = Configuration::get('PS_OS_PAYMENT');
-            } else {
-                $newStatus = Configuration::get('PS_OS_ERROR');
-            }
         } else {
             throw new Exception('Unexpected response from the Payment Gateway');
-        }
-
-        if ($newStatus) {
-            $history = new OrderHistory();
-            $history->id_order = (int)$order->id;
-            $history->changeIdOrderState($newStatus, $order, true);
-            $history->addWithemail(true, array());
-        }
-
-        if (!isset($response['result']) || $response['result'] !== "SUCCESS") {
-            throw new Exception($this->module->l('Your payment was declined.'));
         }
     }
 }
