@@ -181,6 +181,7 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
                 break;
 
             case 'VOID_AUTHORIZATION':
+            case 'CANCELLED':
                 $this->void($order, $response);
                 break;
 

@@ -538,7 +538,7 @@ class GatewayService
 
         // @todo: Find only the first one
         foreach ($response['transaction'] as $txn) {
-            if ($txn['transaction']['type'] === 'AUTHORIZATION') {
+            if ($txn['transaction']['type'] === 'AUTHORIZATION' && $txn['result'] == 'SUCCESS') {
                 return $txn;
             }
         }
@@ -559,7 +559,7 @@ class GatewayService
 
         // @todo: Find only the first one
         foreach ($response['transaction'] as $txn) {
-            if ($txn['transaction']['type'] === 'CAPTURE' || $txn['transaction']['type'] === 'PAYMENT') {
+            if (($txn['transaction']['type'] === 'CAPTURE' || $txn['transaction']['type'] === 'PAYMENT') && $txn['result'] == 'SUCCESS') {
                 return $txn;
             }
         }

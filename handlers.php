@@ -122,7 +122,12 @@ class RefundResponseHandler extends TransactionResponseHandler
      */
     public function handle($order, $response)
     {
-        parent::handle($order, $response);
+        try {
+            parent::handle($order, $response);
+        } catch (MasterCardPaymentException $e) {
+            $this->processor->logger->warning($e->getMessage());
+            return;
+        }
 
         $amount = number_format(floatval($response['transaction']['amount']) * -1, 2, '.', '');
         $order->addOrderPayment(
@@ -145,10 +150,11 @@ class CaptureResponseHandler extends TransactionResponseHandler
      */
     public function handle($order, $response)
     {
-        parent::handle($order, $response);
-
-        if (!$this->isApproved($response)) {
-            throw new MasterCardPaymentException('Transaction not approved by the gateway');
+        try {
+            parent::handle($order, $response);
+        } catch (MasterCardPaymentException $e) {
+            $this->processor->logger->warning($e->getMessage());
+            return;
         }
 
         $order->addOrderPayment(
@@ -167,10 +173,11 @@ class AuthorizationResponseHandler extends TransactionResponseHandler
      */
     public function handle($order, $response)
     {
-        parent::handle($order, $response);
-
-        if (!$this->isApproved($response)) {
-            throw new MasterCardPaymentException('Transaction not approved by the gateway');
+        try {
+            parent::handle($order, $response);
+        } catch (MasterCardPaymentException $e) {
+            $this->processor->logger->warning($e->getMessage());
+            return;
         }
 
         $order->addOrderPayment(
@@ -189,8 +196,10 @@ class TransactionResponseHandler extends ResponseHandler
      */
     public function handle($order, $response)
     {
-        if ($response['result'] != 'SUCCESS') {
-            throw new MasterCardPaymentException($this->processor->module->l('The operation was declined.'));
+        if (!$this->isApproved($response)) {
+            throw new MasterCardPaymentException(
+                $this->processor->module->l('The operation was declined.') . ' ('.$response['response']['gatewayCode'].')'
+            );
         }
     }
 }
@@ -321,7 +330,7 @@ class OrderPaymentResponseHandler extends ResponseHandler
                     ->setProcessor($this->processor)
                     ->handle($order, $txn);
             } else {
-                throw new MasterCardPaymentException('Unknown transaction status ' . $txn['transaction']['type']);
+                throw new MasterCardPaymentException('Unknown transaction type ' . $txn['transaction']['type']);
             }
         }
     }
