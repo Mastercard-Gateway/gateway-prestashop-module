@@ -793,6 +793,9 @@ class Mastercard extends PaymentModule
         $canVoid = $isAuthorized;
         $canCapture = $isAuthorized;
         $canRefund = $order->current_state == Configuration::get('PS_OS_PAYMENT');
+        $canReview = $order->current_state == Configuration::get('MPGS_OS_REVIEW_REQUIRED');
+
+        $canAction = $isAuthorized || $canVoid || $canCapture || $canRefund;
 
         $this->smarty->assign(array(
             'module_dir' => $this->_path,
@@ -801,11 +804,11 @@ class Mastercard extends PaymentModule
             'can_capture' => $canCapture,
             'can_refund' => $canRefund,
             'is_authorized' => $isAuthorized,
+            'can_review' => $canReview,
+            'can_action' => $canAction,
         ));
 
-        if (!$canRefund && !$canCapture && !$canVoid) {
-            return '';
-        }
+        // @todo: Show Order Reference
 
         return $this->display(__FILE__, 'views/templates/hook/order_actions.tpl');
     }
@@ -976,41 +979,58 @@ class Mastercard extends PaymentModule
 //        return $this->context->link->getModuleLink($this->name, 'webhook', array(), true);
     }
 
+//    /**
+//     * @param string $type
+//     * @param Order order
+//     * @return bool|string
+//     */
+//    public function findTxnId($type, $order)
+//    {
+//        $authTxn = $this->findTxn($type, $order);
+//        if (!$authTxn) {
+//            return $authTxn;
+//        }
+//
+//        $txnArr = explode('-', $authTxn->transaction_id, 2);
+//
+//        if (!isset($txnArr[1])) {
+//            return false;
+//        }
+//
+//        return $txnArr[1];
+//    }
+//
+//    /**
+//     * @param string $type
+//     * @param Order $order
+//     * @return bool|OrderPayment
+//     */
+//    public function findTxn($type, $order)
+//    {
+//        foreach ($order->getOrderPayments() as $payment) {
+//            if (stripos($payment->transaction_id, $type . '-') !== false) {
+//                return $payment;
+//            }
+//        }
+//        return false;
+//    }
+
     /**
-     * @param string $type
-     * @param Order order
-     * @return bool|string
-     */
-    public function findTxnId($type, $order)
-    {
-        $authTxn = $this->findTxn($type, $order);
-        if (!$authTxn) {
-            return $authTxn;
-        }
-
-        $txnArr = explode('-', $authTxn->transaction_id, 2);
-
-        if (!isset($txnArr[1])) {
-            return false;
-        }
-
-        return $txnArr[1];
-    }
-
-    /**
-     * @param string $type
      * @param Order $order
-     * @return bool|OrderPayment
+     * @param string $txnId
+     * @return OrderPayment|null
      */
-    public function findTxn($type, $order)
+    public function getTransactionById($order, $txnId)
     {
         foreach ($order->getOrderPayments() as $payment) {
-            if (stripos($payment->transaction_id, $type . '-') !== false) {
+            if ($payment->transaction_id == $txnId) {
                 return $payment;
             }
         }
-        return false;
+
+        return null;
     }
+
 
     /**
      * @return array|null

@@ -7,7 +7,6 @@ require_once(dirname(__FILE__) . '/../../vendor/autoload.php');
 require_once(dirname(__FILE__) . '/../../gateway.php');
 require_once(dirname(__FILE__) . '/../../handlers.php');
 
-
 class AdminMpgsController extends ModuleAdminController
 {
     /**
@@ -37,140 +36,121 @@ class AdminMpgsController extends ModuleAdminController
             $this->module->getWebhookUrl()
         );
 
-        $this->{$actionName}();
+        $orderId = Tools::getValue('id_order');
+        $order = new Order($orderId);
+
+        try {
+            $this->{$actionName}($order);
+            Tools::redirectAdmin($this->context->link->getAdminLink('AdminOrders').'&conf=4&id_order='.(int)$order->id.'&vieworder');
+        } catch (Exception $e) {
+            $this->errors[] = $e->getMessage() . ' (' . $e->getCode() . ')';
+        }
 
         parent::postProcess();
     }
 
     /**
-     * @throws PrestaShopDatabaseException
-     * @throws PrestaShopException
-     * @throws \Http\Client\Exception
+     * @param Order $order
      */
-    protected function voidAction()
+    protected function acceptAction($order)
     {
-        $orderId = Tools::getValue('id_order');
-        $order = new Order($orderId);
-
-        try {
-            $authTxnId = $this->module->findTxnId('auth', $order);
-
-            if (!$authTxnId) {
-                throw new Exception('Authorization transaction not found.');
-            }
-
-            $newTxnId = 'void-' . $authTxnId;
-            $response = $this->client->voidTxn($order->id_cart, $newTxnId, $authTxnId);
-
-            $amount = number_format(floatval($response['transaction']['amount']) * -1, 2, '.', '');
-            $order->addOrderPayment(
-                $amount,
-                null,
-                $response['transaction']['id']
-            );
-
-            $newStatus = Configuration::get('PS_OS_CANCELED');
-            $history = new OrderHistory();
-            $history->id_order = (int)$order->id;
-            $history->changeIdOrderState($newStatus, $order, true);
-            $history->addWithemail(true, array());
-
-        } catch (Exception $e) {
-            $this->errors[] = $e->getMessage() . ' (' . $e->getCode() . ')';
-            return false;
-        }
-
-        Tools::redirectAdmin($this->context->link->getAdminLink('AdminOrders').'&conf=4&id_order='.(int)$order->id.'&vieworder');
+        // @todo
     }
 
     /**
-     * @throws PrestaShopDatabaseException
-     * @throws PrestaShopException
+     * @param Order $order
+     */
+    protected function rejectAction($order)
+    {
+        // @todo
+    }
+
+    /**
+     * @param Order $order
+     * @throws MasterCardPaymentException
+     * @throws \Http\Client\Exception
      * @throws Exception
-     * @throws \Http\Client\Exception
      */
-    protected function captureAction()
+    protected function voidAction($order)
     {
-        $orderId = Tools::getValue('id_order');
-        $order = new Order($orderId);
+        $txnData = $this->client->getAuthorizationTransaction($order->id_cart);
+        $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
 
-        try {
-            $authTxnId = $this->module->findTxnId('auth', $order);
-
-            if (!$authTxnId) {
-                throw new Exception('Authorization transaction not found.');
-            }
-
-            $authTxn = $this->module->findTxn('auth', $order);
-            $currency = Currency::getCurrency($authTxn->id_currency);
-
-            $newTxnId = 'capture-' . $authTxnId;
-            $response = $this->client->captureTxn($order->id_cart, $newTxnId, $authTxn->amount, $currency['iso_code']);
-
-            $order->addOrderPayment(
-                $response['transaction']['amount'],
-                null,
-                $response['transaction']['id']
-            );
-
-            // @todo: Deletes auth transaction, otherwise the payment would appear to be doubled
-            $authTxn->delete();
-
-            $newStatus = Configuration::get('PS_OS_PAYMENT');
-            $history = new OrderHistory();
-            $history->id_order = (int)$order->id;
-            $history->changeIdOrderState($newStatus, $order, true);
-            $history->addWithemail(true, array());
-
-        } catch (Exception $e) {
-            $this->errors[] = $e->getMessage() . ' (' . $e->getCode() . ')';
-            return false;
+        if (!$txn) {
+            throw new Exception('Authorization transaction not found.');
         }
 
-        Tools::redirectAdmin($this->context->link->getAdminLink('AdminOrders').'&conf=4&id_order='.(int)$order->id.'&vieworder');
+        $response = $this->client->voidTxn($order->id_cart, $txn->transaction_id);
+
+        $processor = new ResponseProcessor($this->module);
+        $processor->handle($order, $response, array(
+            new VoidResponseHandler(),
+            new TransactionStatusResponseHandler(),
+        ));
     }
 
     /**
-     * @return bool
+     * @param Order $order
+     * @throws MasterCardPaymentException
      * @throws PrestaShopException
      * @throws \Http\Client\Exception
+     * @throws Exception
      */
-    protected function refundAction()
+    protected function captureAction($order)
     {
-        $orderId = Tools::getValue('id_order');
-        $order = new Order($orderId);
+        $txnData = $this->client->getAuthorizationTransaction($order->id_cart);
+        $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
 
-        try {
-            $txnId = $this->module->findTxnId('capture', $order);
-            $txn = $this->module->findTxn('capture', $order);
-
-            if (!$txnId) {
-                throw new Exception('Capture/Pay transaction not found.');
-            }
-
-            $currency = Currency::getCurrency($txn->id_currency);
-
-            $newTxnId = 'refund-' . $txnId;
-            $response = $this->client->refund($order->id_cart, $newTxnId, $txn->amount, $currency['iso_code']);
-
-            $amount = number_format(floatval($response['transaction']['amount']) * -1, 2, '.', '');
-            $order->addOrderPayment(
-                $amount,
-                null,
-                $response['transaction']['id']
-            );
-
-            $newStatus = Configuration::get('PS_OS_REFUND');
-            $history = new OrderHistory();
-            $history->id_order = (int)$order->id;
-            $history->changeIdOrderState($newStatus, $order, true);
-            $history->addWithemail(true, array());
-
-        } catch (Exception $e) {
-            $this->errors[] = $e->getMessage() . ' (' . $e->getCode() . ')';
-            return false;
+        if (!$txn) {
+            throw new Exception('Authorization transaction not found.');
         }
 
-        Tools::redirectAdmin($this->context->link->getAdminLink('AdminOrders').'&conf=4&id_order='.(int)$order->id.'&vieworder');
+        $currency = Currency::getCurrency($txn->id_currency);
+
+        $response = $this->client->captureTxn(
+            $order->id_cart,
+            $txn->transaction_id,
+            $txn->amount,
+            $currency['iso_code']
+        );
+
+        $processor = new ResponseProcessor($this->module);
+        $processor->handle($order, $response, array(
+            new CaptureResponseHandler(),
+            new TransactionStatusResponseHandler(),
+        ));
+
+        $txn->delete();
+    }
+
+    /**
+     * @param Order $order
+     * @throws MasterCardPaymentException
+     * @throws \Http\Client\Exception
+     * @throws Exception
+     */
+    protected function refundAction($order)
+    {
+        $txnData = $this->client->getCaptureTransaction($order->id_cart);
+        $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
+
+        if (!$txn) {
+            throw new Exception('Capture/Pay transaction not found.');
+        }
+
+        $currency = Currency::getCurrency($txn->id_currency);
+
+        $response = $this->client->refund(
+            $order->id_cart,
+            $txn->transaction_id,
+            $txn->amount,
+            $currency['iso_code']
+        );
+
+        $processor = new ResponseProcessor($this->module);
+        $processor->handle($order, $response, array(
+            new RefundResponseHandler(),
+            new TransactionStatusResponseHandler(),
+        ));
     }
 }

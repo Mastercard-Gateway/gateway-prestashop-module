@@ -130,6 +130,29 @@ abstract class ResponseHandler
     }
 }
 
+class RefundResponseHandler extends TransactionResponseHandler
+{
+    /**
+     * @inheritdoc
+     */
+    public function handle($order, $response)
+    {
+        parent::handle($order, $response);
+
+        $amount = number_format(floatval($response['transaction']['amount']) * -1, 2, '.', '');
+        $order->addOrderPayment(
+            $amount,
+            null,
+            $response['transaction']['id']
+        );
+    }
+}
+
+class VoidResponseHandler extends RefundResponseHandler
+{
+
+}
+
 class CaptureResponseHandler extends TransactionResponseHandler
 {
     /**
@@ -146,7 +169,7 @@ class CaptureResponseHandler extends TransactionResponseHandler
         $order->addOrderPayment(
             $response['transaction']['amount'],
             null,
-            'capture-' . $response['transaction']['id']
+            $response['transaction']['id']
         );
     }
 }
@@ -168,7 +191,7 @@ class AuthorizationResponseHandler extends TransactionResponseHandler
         $order->addOrderPayment(
             $response['transaction']['amount'],
             null,
-            'auth-' . $response['transaction']['id']
+            $response['transaction']['id']
         );
 
     }
@@ -182,7 +205,7 @@ class TransactionResponseHandler extends ResponseHandler
     public function handle($order, $response)
     {
         if ($response['result'] != 'SUCCESS') {
-            throw new MasterCardPaymentException($this->module->l('Your payment was declined.'));
+            throw new MasterCardPaymentException($this->module->l('The operation was declined.'));
         }
     }
 }
@@ -192,9 +215,19 @@ class OrderStatusResponseHandler extends ResponseHandler
     /**
      * @param Order $order
      * @param array $response
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
      */
     public function handle($order, $response)
     {
+        if ($this->hasExceptions()) {
+            $history = new OrderHistory();
+            $history->id_order = (int)$order->id;
+            $history->changeIdOrderState(Configuration::get('PS_OS_ERROR'), $order, true);
+            $history->addWithemail(true, array());
+            return;
+        }
+
         if ($order->getCurrentState() == Configuration::get('MPGS_OS_FRAUD')) {
             return;
         }
@@ -203,7 +236,7 @@ class OrderStatusResponseHandler extends ResponseHandler
             return;
         }
 
-        $newStatus = null;
+        $newStatus = Configuration::get('PS_OS_ERROR');
 
         if ($response['status'] == "AUTHORIZED") {
             $newStatus = Configuration::get('MPGS_OS_AUTHORIZED');
@@ -213,10 +246,12 @@ class OrderStatusResponseHandler extends ResponseHandler
             $newStatus = Configuration::get('PS_OS_PAYMENT');
         }
 
-        // If can't figure out what status the order is in OR
-        // If any previous handlers have failed, mark the order as failed
-        if (!$newStatus || $this->hasExceptions()) {
-            $newStatus = Configuration::get('PS_OS_ERROR');
+        if ($response['status'] == 'VOID_AUTHORIZATION') {
+            $newStatus = Configuration::get('PS_OS_CANCELED');
+        }
+
+        if ($response['status'] == 'REFUNDED') {
+            $newStatus = Configuration::get('PS_OS_REFUND');
         }
 
         $history = new OrderHistory();
@@ -243,6 +278,8 @@ class RiskResponseHandler extends ResponseHandler
     /**
      * @param Order $order
      * @param array $response
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
      */
     public function handle($order, $response)
     {

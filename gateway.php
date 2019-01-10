@@ -10,18 +10,64 @@ use Http\Message\Authentication\BasicAuth;
 use Http\Client\Common\PluginClient;
 use Http\Message\RequestMatcher\RequestMatcher;
 use Http\Client\Common\HttpClientRouter;
-use Http\Client\Common\Plugin\ErrorPlugin;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 use Http\Client\Common\Plugin\ContentLengthPlugin;
 use Http\Client\Common\Plugin\HeaderSetPlugin;
 use Http\Client\Common\Plugin;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Http\Message\Formatter;
 use Http\Message\Formatter\SimpleFormatter;
 use Http\Client\Exception;
+use Http\Client\Common\Exception\ClientErrorException;
+use Http\Client\Common\Exception\ServerErrorException;
 
+class ApiErrorPlugin implements Plugin
+{
+    /**
+     * @inheritdoc
+     */
+    public function handleRequest(\Psr\Http\Message\RequestInterface $request, callable $next, callable $first)
+    {
+        $promise = $next($request);
+
+        return $promise->then(function (ResponseInterface $response) use ($request) {
+            return $this->transformResponseToException($request, $response);
+        });
+    }
+
+    /**
+     * @param RequestInterface $request
+     * @param ResponseInterface $response
+     * @return ResponseInterface
+     */
+    protected function transformResponseToException(RequestInterface $request, ResponseInterface $response)
+    {
+        if ($response->getStatusCode() >= 400 && $response->getStatusCode() < 500) {
+            $responseData = @json_decode($response->getBody(), true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new ServerErrorException("Response not valid JSON", $request, $response);
+            }
+
+            $msg = '';
+            if (isset($responseData['error']['cause'])) {
+                $msg .= $responseData['error']['cause'] . ': ';
+            }
+            if (isset($responseData['error']['explanation'])) {
+                $msg .= $responseData['error']['explanation'];
+            }
+            throw new ClientErrorException($msg, $request, $response);
+        }
+
+        if ($response->getStatusCode() >= 500 && $response->getStatusCode() < 600) {
+            throw new ServerErrorException($response->getReasonPhrase(), $request, $response);
+        }
+
+        return $response;
+    }
+}
 
 class ApiLoggerPlugin implements Plugin
 {
@@ -149,7 +195,7 @@ class GatewayService
                 new ContentLengthPlugin(),
                 new HeaderSetPlugin(['Content-Type' => 'application/json;charset=UTF-8']),
                 new AuthenticationPlugin(new BasicAuth($username, $password)),
-                new ErrorPlugin(),
+                new ApiErrorPlugin(),
                 new ApiLoggerPlugin($logger),
             )
         );
@@ -480,6 +526,48 @@ class GatewayService
     }
 
     /**
+     * Helper method to find the authorisation transaction
+     *
+     * @param string $orderId
+     * @return null|array
+     * @throws Exception
+     */
+    public function getAuthorizationTransaction($orderId)
+    {
+        $response = $this->retrieveOrder($orderId);
+
+        // @todo: Find only the first one
+        foreach ($response['transaction'] as $txn) {
+            if ($txn['transaction']['type'] === 'AUTHORIZATION') {
+                return $txn;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Helper method to find the capture/pay transaction
+     *
+     * @param string $orderId
+     * @return null|array
+     * @throws Exception
+     */
+    public function getCaptureTransaction($orderId)
+    {
+        $response = $this->retrieveOrder($orderId);
+
+        // @todo: Find only the first one
+        foreach ($response['transaction'] as $txn) {
+            if ($txn['transaction']['type'] === 'CAPTURE' || $txn['transaction']['type'] === 'PAYMENT') {
+                return $txn;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Request to retrieve the details of a transaction. For example you can retrieve the details of an authorization that you previously executed.
      * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
@@ -508,13 +596,13 @@ class GatewayService
      * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
      * @param string $orderId
-     * @param string $newTxnId
      * @param string $txnId
      * @return mixed|\Psr\Http\Message\ResponseInterface
      * @throws Exception
      */
-    public function voidTxn($orderId, $newTxnId, $txnId)
+    public function voidTxn($orderId, $txnId)
     {
+        $newTxnId = 'void-' . $txnId;
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $newTxnId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
@@ -543,14 +631,15 @@ class GatewayService
      * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
      * @param string $orderId
-     * @param string $newTxnId
+     * @param string $txnId
      * @param $amount
      * @param $currency
      * @return mixed|ResponseInterface
      * @throws Exception
      */
-    public function captureTxn($orderId, $newTxnId, $amount, $currency)
+    public function captureTxn($orderId, $txnId, $amount, $currency)
     {
+        $newTxnId = 'capture-' . $txnId;
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $newTxnId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
@@ -583,14 +672,15 @@ class GatewayService
      * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
      * @param $orderId
-     * @param $newTxnId
+     * @param $txnId
      * @param $amount
      * @param $currency
      * @return mixed|ResponseInterface
      * @throws Exception
      */
-    public function refund($orderId, $newTxnId, $amount, $currency)
+    public function refund($orderId, $txnId, $amount, $currency)
     {
+        $newTxnId = 'refund-' . $txnId;
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $newTxnId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
