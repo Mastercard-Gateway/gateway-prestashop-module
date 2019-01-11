@@ -259,7 +259,7 @@ class Mastercard extends PaymentModule
                 copy($source, $destination);
             }
 
-            Configuration::updateValue('MPGS_OS_FRAUD', (int) $order_state->id);
+            Configuration::updateValue('MPGS_OS_REVIEW_REQUIRED', (int) $order_state->id);
         }
         if (!Configuration::get('MPGS_OS_FRAUD')
             || !Validate::isLoadedObject(new OrderState(Configuration::get('MPGS_OS_FRAUD')))) {
