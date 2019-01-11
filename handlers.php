@@ -196,6 +196,20 @@ class TransactionResponseHandler extends ResponseHandler
      */
     public function handle($order, $response)
     {
+        $state = $order->getCurrentOrderState();
+
+        if ($state->id == Configuration::get('MPGS_OS_FRAUD')) {
+            throw new MasterCardPaymentException(
+                $this->processor->module->l('Payment is marked as fraud, action is blocked.')
+            );
+        }
+
+        if ($state->id == Configuration::get('MPGS_OS_REVIEW_REQUIRED')) {
+            throw new MasterCardPaymentException(
+                $this->processor->module->l('Risk decision needed, action is blocked.')
+            );
+        }
+
         if (!$this->isApproved($response)) {
             throw new MasterCardPaymentException(
                 $this->processor->module->l('The operation was declined.') . ' ('.$response['response']['gatewayCode'].')'
@@ -214,19 +228,19 @@ class OrderStatusResponseHandler extends ResponseHandler
      */
     public function handle($order, $response)
     {
-        if ($this->hasExceptions()) {
-            $history = new OrderHistory();
-            $history->id_order = (int)$order->id;
-            $history->changeIdOrderState(Configuration::get('PS_OS_ERROR'), $order, true);
-            $history->addWithemail(true, array());
-            return;
-        }
-
         if ($order->getCurrentState() == Configuration::get('MPGS_OS_FRAUD')) {
             return;
         }
 
         if ($order->getCurrentState() == Configuration::get('MPGS_OS_REVIEW_REQUIRED')) {
+            return;
+        }
+
+        if ($this->hasExceptions()) {
+            $history = new OrderHistory();
+            $history->id_order = (int)$order->id;
+            $history->changeIdOrderState(Configuration::get('PS_OS_ERROR'), $order, true);
+            $history->addWithemail(true, array());
             return;
         }
 
@@ -295,14 +309,24 @@ class RiskResponseHandler extends ResponseHandler
             $risk = $response['risk']['response'];
 
             if ($risk['gatewayCode'] == 'REVIEW_REQUIRED') {
-                $newStatus = Configuration::get('MPGS_OS_REVIEW_REQUIRED');
+                if ($risk['review']['decision'] == 'PENDING') {
+                    $newStatus = Configuration::get('MPGS_OS_REVIEW_REQUIRED');
+                }
+                if ($risk['review']['decision'] == 'ACCEPTED') {
+                    $newStatus = Configuration::get('MPGS_OS_PAYMENT_WAITING');
+                }
+                if ($risk['review']['decision'] == 'REJECTED') {
+                    $newStatus = Configuration::get('MPGS_OS_FRAUD');
+                }
             }
             if ($risk['gatewayCode'] == 'REJECTED') {
                 $newStatus = Configuration::get('MPGS_OS_FRAUD');
             }
         }
 
-        if ($newStatus) {
+        $state = $order->getCurrentOrderState();
+
+        if ($newStatus && $newStatus != $state->id) {
             $history = new OrderHistory();
             $history->id_order = (int)$order->id;
             $history->changeIdOrderState($newStatus, $order, true);

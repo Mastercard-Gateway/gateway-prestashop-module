@@ -149,8 +149,8 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
 
         try {
             $processor->handle($order, $response, array(
-                new OrderPaymentResponseHandler(),
                 new RiskResponseHandler(),
+                new OrderPaymentResponseHandler(),
                 new OrderStatusResponseHandler(),
             ));
         } catch (Exception $e) {

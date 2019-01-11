@@ -162,8 +162,14 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
             exit;
         }
 
+        $mpgsOrderId = $response['order']['id'];
+        $prefix = Configuration::get('mpgs_order_prefix');
+        if ($prefix) {
+            $mpgsOrderId = substr($mpgsOrderId, strlen($prefix));
+        }
+
         /** @var Order $order */
-        $order = Order::getByCartId($response['order']['id']);
+        $order = Order::getByCartId($mpgsOrderId);
 
         switch ($response['transaction']['type']) {
             case 'AUTHORIZATION':
@@ -202,43 +208,36 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
     /**
      * @param Order $order
      * @param array $response
+     * @throws \Http\Client\Exception
      */
     protected function capture($order, $response)
     {
         $state = $order->getCurrentOrderState();
         if (
             $state->id != Configuration::get('MPGS_OS_AUTHORIZED') &&
-            $state->id != Configuration::get('MPGS_OS_PAYMENT_WAITING')
+            $state->id != Configuration::get('MPGS_OS_PAYMENT_WAITING') &&
+            $state->id != Configuration::get('MPGS_OS_REVIEW_REQUIRED')
         ) {
             $this->logger->warning(sprintf("Order state '%s' does not allow capture", $state->id), $this->getLoggerContext($response));
             return;
         }
 
         try {
-            $authTxnId = $this->module->findTxnId('auth', $order);
-            $authTxn = $this->module->findTxn('auth', $order);
+            $txnData = $this->client->getAuthorizationTransaction($this->module->getOrderRef($order));
+            $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
 
-            $order->addOrderPayment(
-                $response['transaction']['amount'],
-                null,
-                'capture-' . $response['transaction']['id']
-            );
+            $processor = new ResponseProcessor($this->module);
+            $processor->handle($order, $response, array(
+                new RiskResponseHandler(),
+                new CaptureResponseHandler(),
+                new TransactionStatusResponseHandler(),
+            ));
 
-            if ($authTxnId) {
-                // @todo: Deletes auth transaction, otherwise the payment would appear to be doubled
-                $authTxn->delete();
-            } else {
-                $this->logger->warning('Authorization transaction not found on this order');
+            if ($txn) {
+                $txn->delete();
             }
-
-            $newStatus = Configuration::get('PS_OS_PAYMENT');
-            $history = new OrderHistory();
-            $history->id_order = (int)$order->id;
-            $history->changeIdOrderState($newStatus, $order, true);
-            $history->addWithemail(true, array());
-
         } catch (Exception $e) {
-            $this->logger->critical('Capture Error', array($this->getLoggerContext($response), $e));
+            $this->logger->critical('Capture Error', array('exception' => $e));
             $this->emitServerError('Capture Error');
         }
     }
@@ -256,28 +255,13 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
         }
 
         try {
-            $txnId = $this->module->findTxnId('capture', $order);
-            if (!$txnId) {
-                $this->logger->warning('Capture/pay transaction not found on this order');
-                return;
-            }
-
-
-            $amount = number_format(floatval($response['transaction']['amount']) * -1, 2, '.', '');
-            $order->addOrderPayment(
-                $amount,
-                null,
-                'refund-' . $response['transaction']['id']
-            );
-
-            $newStatus = Configuration::get('PS_OS_REFUND');
-            $history = new OrderHistory();
-            $history->id_order = (int)$order->id;
-            $history->changeIdOrderState($newStatus, $order, true);
-            $history->addWithemail(true, array());
-
+            $processor = new ResponseProcessor($this->module);
+            $processor->handle($order, $response, array(
+                new RefundResponseHandler(),
+                new TransactionStatusResponseHandler(),
+            ));
         } catch (Exception $e) {
-            $this->logger->critical('Refund Error', array($this->getLoggerContext($response), $e));
+            $this->logger->critical('Refund Error', array('exception' => $e));
             $this->emitServerError('Refund Error');
         }
     }
@@ -295,27 +279,13 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
         }
 
         try {
-            $txnId = $this->module->findTxnId('auth', $order);
-            if (!$txnId) {
-                $this->logger->warning('Authorization transaction not found on this order');
-                return;
-            }
-
-            $amount = number_format(floatval($response['transaction']['amount']) * -1, 2, '.', '');
-            $order->addOrderPayment(
-                $amount,
-                null,
-                'void-' . $response['transaction']['id']
-            );
-
-            $newStatus = Configuration::get('PS_OS_CANCELED');
-            $history = new OrderHistory();
-            $history->id_order = (int)$order->id;
-            $history->changeIdOrderState($newStatus, $order, true);
-            $history->addWithemail(true, array());
-
+            $processor = new ResponseProcessor($this->module);
+            $processor->handle($order, $response, array(
+                new VoidResponseHandler(),
+                new TransactionStatusResponseHandler(),
+            ));
         } catch (Exception $e) {
-            $this->logger->critical('Void Error', array($this->getLoggerContext($response), $e));
+            $this->logger->critical('Void Error', array('exception' => $e));
             $this->emitServerError('Void Error');
         }
     }
@@ -327,24 +297,23 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
     protected function authorize($order, $response)
     {
         $state = $order->getCurrentOrderState();
-        if ($state->id != Configuration::get('MPGS_OS_PAYMENT_WAITING')) {
+        if (
+            $state->id != Configuration::get('MPGS_OS_PAYMENT_WAITING') &&
+            $state->id != Configuration::get('MPGS_OS_REVIEW_REQUIRED')
+        ) {
             $this->logger->warning(sprintf("Order state '%s' does not allow authorization", $state->id), $this->getLoggerContext($response));
             return;
         }
 
         try {
-            $order->addOrderPayment(
-                $response['transaction']['amount'],
-                null,
-                'auth-' . $response['transaction']['id']
-            );
-
-            $history = new OrderHistory();
-            $history->id_order = (int)$order->id;
-            $history->changeIdOrderState(Configuration::get('MPGS_OS_AUTHORIZED'), $order, true);
-            $history->addWithemail(true, array());
+            $processor = new ResponseProcessor($this->module);
+            $processor->handle($order, $response, array(
+                new RiskResponseHandler(),
+                new AuthorizationResponseHandler(),
+                new TransactionStatusResponseHandler(),
+            ));
         } catch (Exception $e) {
-            $this->logger->critical('Authorize Error', array($this->getLoggerContext($response), $e));
+            $this->logger->critical('Authorize Error', array('exception' => $e));
             $this->emitServerError('Authorize Error');
         }
     }

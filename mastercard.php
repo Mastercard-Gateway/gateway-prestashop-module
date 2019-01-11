@@ -436,6 +436,7 @@ class Mastercard extends PaymentModule
             'mpgs_api_url' => Tools::getValue('mpgs_api_url', Configuration::get('mpgs_api_url')),
             'mpgs_api_url_custom' => Tools::getValue('mpgs_api_url_custom', Configuration::get('mpgs_api_url_custom')),
             'mpgs_lineitems_enabled' => Tools::getValue('mpgs_lineitems_enabled', Configuration::get('mpgs_lineitems_enabled')),
+            'mpgs_webhook_url' => Tools::getValue('mpgs_webhook_url', Configuration::get('mpgs_webhook_url')),
 
             'mpgs_merchant_id' => Tools::getValue('mpgs_merchant_id', Configuration::get('mpgs_merchant_id')),
             'mpgs_api_password' => Tools::getValue('mpgs_api_password', Configuration::get('mpgs_api_password')),
@@ -757,9 +758,16 @@ class Mastercard extends PaymentModule
                 'input' => array(
                     array(
                         'type' => 'text',
-                        'label' => $this->l('Order ID prefix'),
+                        'label' => $this->l('Order ID Prefix'),
                         'desc' => $this->l('Should be specified in case multiple integrations use the same Merchant ID'),
                         'name' => 'mpgs_order_prefix',
+                        'required' => false
+                    ),
+                    array(
+                        'type' => 'text',
+                        'label' => $this->l('Custom Webhook Endpoint'),
+                        'desc' => $this->l('If left blank, the value default to: ') . $this->context->link->getModuleLink($this->name, 'webhook', array(), true),
+                        'name' => 'mpgs_webhook_url',
                         'required' => false
                     ),
 
@@ -1002,49 +1010,9 @@ class Mastercard extends PaymentModule
      */
     public function getWebhookUrl()
     {
-        // @todo
-        // SSH tunnel
-        // curl http://li301-231.members.linode.com/en/module/mastercard/webhook
-        // ssh -nNTR 0.0.0.0:80:localhost:80 root@178.79.163.231 -vvv
-        return 'http://li301-231.members.linode.com/en/module/mastercard/webhook';
-//        return $this->context->link->getModuleLink($this->name, 'webhook', array(), true);
+        return Configuration::get('mpgs_webhook_url') ?
+            : $this->context->link->getModuleLink($this->name, 'webhook', array(), true);
     }
-
-//    /**
-//     * @param string $type
-//     * @param Order order
-//     * @return bool|string
-//     */
-//    public function findTxnId($type, $order)
-//    {
-//        $authTxn = $this->findTxn($type, $order);
-//        if (!$authTxn) {
-//            return $authTxn;
-//        }
-//
-//        $txnArr = explode('-', $authTxn->transaction_id, 2);
-//
-//        if (!isset($txnArr[1])) {
-//            return false;
-//        }
-//
-//        return $txnArr[1];
-//    }
-//
-//    /**
-//     * @param string $type
-//     * @param Order $order
-//     * @return bool|OrderPayment
-//     */
-//    public function findTxn($type, $order)
-//    {
-//        foreach ($order->getOrderPayments() as $payment) {
-//            if (stripos($payment->transaction_id, $type . '-') !== false) {
-//                return $payment;
-//            }
-//        }
-//        return false;
-//    }
 
     /**
      * @param Order $order

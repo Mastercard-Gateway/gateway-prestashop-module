@@ -529,12 +529,15 @@ class GatewayService
      * Helper method to find the authorisation transaction
      *
      * @param string $orderId
+     * @param array $response
      * @return null|array
      * @throws Exception
      */
-    public function getAuthorizationTransaction($orderId)
+    public function getAuthorizationTransaction($orderId, $response = array())
     {
-        $response = $this->retrieveOrder($orderId);
+        if (empty($response)) {
+            $response = $this->retrieveOrder($orderId);
+        }
 
         // @todo: Find only the first one
         foreach ($response['transaction'] as $txn) {
@@ -550,12 +553,15 @@ class GatewayService
      * Helper method to find the capture/pay transaction
      *
      * @param string $orderId
+     * @param array $response
      * @return null|array
      * @throws Exception
      */
-    public function getCaptureTransaction($orderId)
+    public function getCaptureTransaction($orderId, $response = array())
     {
-        $response = $this->retrieveOrder($orderId);
+        if (empty($response)) {
+            $response = $this->retrieveOrder($orderId);
+        }
 
         // @todo: Find only the first one
         foreach ($response['transaction'] as $txn) {
