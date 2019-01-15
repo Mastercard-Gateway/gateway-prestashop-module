@@ -130,6 +130,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
 
             $processor = new ResponseProcessor($this->module);
             $processor->handle($order, $response, array(
+                new RiskResponseHandler(),
                 new CaptureResponseHandler(),
                 new OrderStatusResponseHandler(),
             ));
