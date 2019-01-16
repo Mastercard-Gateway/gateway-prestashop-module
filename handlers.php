@@ -113,6 +113,57 @@ abstract class ResponseHandler
     {
         return !empty($this->processor->exceptions);
     }
+
+    /**
+     * @todo: This is currently almost identical to Order->addOrderPayment()
+     *
+     * @param Order $order
+     * @param float $amount_paid
+     * @param string $payment_transaction_id
+     * @param array $txn
+     * @return bool
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
+    public function addOrderPayment($order, $amount_paid, $payment_transaction_id = null, $txn = array())
+    {
+        $order_payment = new OrderPayment();
+        $order_payment->order_reference = $order->reference;
+        $order_payment->id_currency = $order->id_currency;
+        $order_payment->conversion_rate = 1;
+        $order_payment->payment_method = $order->payment;
+        $order_payment->transaction_id = $payment_transaction_id;
+        $order_payment->amount = $amount_paid;
+        $order_payment->date_add = null;
+
+        if (isset($txn['sourceOfFunds'], $txn['sourceOfFunds']['provided'], $txn['sourceOfFunds']['provided']['card'])) {
+            $order_payment->card_number = $txn['sourceOfFunds']['provided']['card']['number'];
+            $order_payment->card_expiration = $txn['sourceOfFunds']['provided']['card']['expiry']['month'] . '/' . $txn['sourceOfFunds']['provided']['card']['expiry']['year'];
+            $order_payment->card_brand = $txn['sourceOfFunds']['provided']['card']['brand'];
+            $order_payment->card_holder = $txn['sourceOfFunds']['provided']['card']['nameOnCard'];
+        }
+
+        // Add time to the date if needed
+        if ($order_payment->date_add != null && preg_match('/^[0-9]+-[0-9]+-[0-9]+$/', $order_payment->date_add)) {
+            $order_payment->date_add .= ' '.date('H:i:s');
+        }
+
+        // Update total_paid_real value for backward compatibility reasons
+        if ($order_payment->id_currency == $order->id_currency) {
+            $order->total_paid_real += $order_payment->amount;
+        } else {
+            $order->total_paid_real += Tools::ps_round(Tools::convertPrice($order_payment->amount, $order_payment->id_currency, false), 2);
+        }
+
+        // We put autodate parameter of add method to true if date_add field is null
+        $res = $order_payment->add(is_null($order_payment->date_add)) && $order->update();
+
+        if (!$res) {
+            return false;
+        }
+
+        return $res;
+    }
 }
 
 class RefundResponseHandler extends TransactionResponseHandler
@@ -130,10 +181,11 @@ class RefundResponseHandler extends TransactionResponseHandler
         }
 
         $amount = number_format(floatval($response['transaction']['amount']) * -1, 2, '.', '');
-        $order->addOrderPayment(
+        $this->addOrderPayment(
+            $order,
             $amount,
-            null,
-            $response['transaction']['id']
+            $response['transaction']['id'],
+            $response
         );
     }
 }
@@ -157,10 +209,11 @@ class CaptureResponseHandler extends TransactionResponseHandler
             return;
         }
 
-        $order->addOrderPayment(
+        $this->addOrderPayment(
+            $order,
             $response['transaction']['amount'],
-            null,
-            $response['transaction']['id']
+            $response['transaction']['id'],
+            $response
         );
     }
 }
@@ -180,10 +233,11 @@ class AuthorizationResponseHandler extends TransactionResponseHandler
             return;
         }
 
-        $order->addOrderPayment(
+        $this->addOrderPayment(
+            $order,
             $response['transaction']['amount'],
-            null,
-            $response['transaction']['id']
+            $response['transaction']['id'],
+            $response
         );
 
     }

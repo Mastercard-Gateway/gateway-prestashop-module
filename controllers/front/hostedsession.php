@@ -89,7 +89,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             (int)$cart->id,
             Configuration::get('MPGS_OS_PAYMENT_WAITING'),
             $cart->getOrderTotal(),
-            $this->module->displayName,
+            MasterCard::PAYMENT_CODE,
             null,
             array(),
             $currency->id,

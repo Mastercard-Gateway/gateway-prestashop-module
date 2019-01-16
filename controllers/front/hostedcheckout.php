@@ -135,7 +135,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
             (int)$cart->id,
             Configuration::get('MPGS_OS_PAYMENT_WAITING'),
             $response['amount'],
-            $this->module->displayName,
+            MasterCard::PAYMENT_CODE,
             null,
             array(),
             $currency->id,

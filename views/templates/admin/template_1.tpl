@@ -8,19 +8,4 @@
 			<h4>{l s='Fast - Secure - Reliable' mod='mastercard'}</h4>
 		</div>
 	</div>
-
-	<hr />
-
-	<div class="mastercard-content">
-
-		<div class="row">
-			<div class="col-md-12">
-				<h4>{l s='Accept payments using all major credit cards' mod='mastercard'}</h4>
-				
-				<div class="row">
-					<img src="{$module_dir|escape:'html':'UTF-8'}views/img/template_1_cards.png" class="col-md-6" id="payment-logo" />
-				</div>
-			</div>
-		</div>
-	</div>
 </div>

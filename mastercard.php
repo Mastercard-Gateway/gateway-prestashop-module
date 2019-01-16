@@ -20,6 +20,7 @@ require_once(dirname(__FILE__) . '/handlers.php');
  */
 class Mastercard extends PaymentModule
 {
+    const PAYMENT_CODE = 'MPGS';
     const MPGS_API_VERSION = '50';
 
     const PAYMENT_ACTION_PAY = 'PAY';
@@ -68,8 +69,8 @@ class Mastercard extends PaymentModule
         parent::__construct();
 
         $this->controllerAdmin = 'AdminMpgs';
-        $this->displayName = $this->l('MasterCard');
-        $this->description = $this->l('MasterCard Payment Module for Prestashop');
+        $this->displayName = $this->l('Mastercard Payment Gateway Services');
+        $this->description = $this->l('Mastercard Payment Gateway Services module for Prestashop');
 
 //        $this->limited_countries = array('FR');
 //        $this->limited_currencies = array('EUR');
@@ -435,7 +436,7 @@ class Mastercard extends PaymentModule
             'mpgs_order_prefix' => Tools::getValue('mpgs_order_prefix', Configuration::get('mpgs_order_prefix')),
             'mpgs_api_url' => Tools::getValue('mpgs_api_url', Configuration::get('mpgs_api_url')),
             'mpgs_api_url_custom' => Tools::getValue('mpgs_api_url_custom', Configuration::get('mpgs_api_url_custom')),
-            'mpgs_lineitems_enabled' => Tools::getValue('mpgs_lineitems_enabled', Configuration::get('mpgs_lineitems_enabled')),
+            'mpgs_lineitems_enabled' => Tools::getValue('mpgs_lineitems_enabled', Configuration::get('mpgs_lineitems_enabled', null, null, null, "1")),
             'mpgs_webhook_url' => Tools::getValue('mpgs_webhook_url', Configuration::get('mpgs_webhook_url')),
 
             'mpgs_merchant_id' => Tools::getValue('mpgs_merchant_id', Configuration::get('mpgs_merchant_id')),
@@ -498,34 +499,34 @@ class Mastercard extends PaymentModule
                         'name' => 'mpgs_hc_ga_tracking_id',
                         'required' => false
                     ),
-                    array(
-                        'type' => 'select',
-                        'label' => $this->l('Billing Address display'),
-                        'name' => 'mpgs_hc_show_billing',
-                        'options' => array(
-                            'query' => array(
-                                array('id' => 'HIDE', 'name' => $this->l('Hide')),
-                                array('id' => 'MANDATORY', 'name' => $this->l('Mandatory')),
-                                array('id' => 'OPTIONAL', 'name' => $this->l('Optional')),
-                            ),
-                            'id' => 'id',
-                            'name' => 'name',
-                        ),
-                    ),
-                    array(
-                        'type' => 'select',
-                        'label' => $this->l('Email Address display'),
-                        'name' => 'mpgs_hc_show_email',
-                        'options' => array(
-                            'query' => array(
-                                array('id' => 'HIDE', 'name' => $this->l('Hide')),
-                                array('id' => 'MANDATORY', 'name' => $this->l('Mandatory')),
-                                array('id' => 'OPTIONAL', 'name' => $this->l('Optional')),
-                            ),
-                            'id' => 'id',
-                            'name' => 'name',
-                        ),
-                    ),
+//                    array(
+//                        'type' => 'select',
+//                        'label' => $this->l('Billing Address display'),
+//                        'name' => 'mpgs_hc_show_billing',
+//                        'options' => array(
+//                            'query' => array(
+//                                array('id' => 'HIDE', 'name' => $this->l('Hide')),
+//                                array('id' => 'MANDATORY', 'name' => $this->l('Mandatory')),
+//                                array('id' => 'OPTIONAL', 'name' => $this->l('Optional')),
+//                            ),
+//                            'id' => 'id',
+//                            'name' => 'name',
+//                        ),
+//                    ),
+//                    array(
+//                        'type' => 'select',
+//                        'label' => $this->l('Email Address display'),
+//                        'name' => 'mpgs_hc_show_email',
+//                        'options' => array(
+//                            'query' => array(
+//                                array('id' => 'HIDE', 'name' => $this->l('Hide')),
+//                                array('id' => 'MANDATORY', 'name' => $this->l('Mandatory')),
+//                                array('id' => 'OPTIONAL', 'name' => $this->l('Optional')),
+//                            ),
+//                            'id' => 'id',
+//                            'name' => 'name',
+//                        ),
+//                    ),
                     array(
                         'type' => 'select',
                         'label' => $this->l('Order Summary display'),
@@ -684,9 +685,9 @@ class Mastercard extends PaymentModule
                     array(
                         'type' => 'switch',
                         'label' => $this->l('Send Line Items'),
+                        'desc' => $this->l('Include line item details on gateway order'),
                         'name' => 'mpgs_lineitems_enabled',
                         'is_bool' => true,
-                        'desc' => '',
                         'values' => array(
                             array(
                                 'id' => 'active_off',
@@ -758,7 +759,7 @@ class Mastercard extends PaymentModule
                 'input' => array(
                     array(
                         'type' => 'text',
-                        'label' => $this->l('Order ID Prefix'),
+                        'label' => $this->l('Gateway Order ID Prefix'),
                         'desc' => $this->l('Should be specified in case multiple integrations use the same Merchant ID'),
                         'name' => 'mpgs_order_prefix',
                         'required' => false
@@ -766,7 +767,7 @@ class Mastercard extends PaymentModule
                     array(
                         'type' => 'text',
                         'label' => $this->l('Custom Webhook Endpoint'),
-                        'desc' => $this->l('If left blank, the value default to: ') . $this->context->link->getModuleLink($this->name, 'webhook', array(), true),
+                        'desc' => $this->l('Not required. If left blank, the value defaults to: ') . $this->context->link->getModuleLink($this->name, 'webhook', array(), true),
                         'name' => 'mpgs_webhook_url',
                         'required' => false
                     ),
@@ -823,7 +824,7 @@ class Mastercard extends PaymentModule
         }
 
         $order = new Order($params['id_order']);
-        if ($order->payment != $this->displayName) {
+        if ($order->payment != self::PAYMENT_CODE) {
             return '';
         }
 
