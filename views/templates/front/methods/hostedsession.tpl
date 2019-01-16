@@ -91,6 +91,7 @@
                 }
                 errorsContainer.innerText = message;
                 errorsContainer.style.display = 'block';
+                document.querySelector('#payment-confirmation button').disabled = false;
             }
         }  else if (response.status === "ok") {
             if (is3DsEnabled()) {
@@ -100,6 +101,7 @@
         } else {
             errorsContainer.innerText = hsLoadingFailedMsg + ' (unexpected status: '+response.status+')';
             errorsContainer.style.display = 'block';
+            document.querySelector('#payment-confirmation button').disabled = false;
         }
     }
 
