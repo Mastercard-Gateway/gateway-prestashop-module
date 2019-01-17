@@ -68,7 +68,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             $threeDSecureId = Tools::getValue('3DSecureId');
 
             if (!$paRes || !$threeDSecureId) {
-                $this->errors[] = $this->module->l('Payment error occurred (3D Secure).');
+                $this->errors[] = $this->module->l('Payment error occurred (3D Secure).', 'abstract');
                 $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
                     'action' => 'show'
                 )));
@@ -78,7 +78,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             $response = $this->client->process3dsResult($threeDSecureId, $paRes);
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
-                $this->errors[] = $this->module->l('Your payment was declined by 3D Secure.');
+                $this->errors[] = $this->module->l('Your payment was declined by 3D Secure.', 'abstract');
                 $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
                     'action' => 'show'
                 )));
@@ -126,7 +126,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             );
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
-                $this->errors[] = $this->module->l('Your payment was declined.');
+                $this->errors[] = $this->module->l('Your payment was declined.', 'abstract');
                 $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
                     'action' => 'show'
                 )));

@@ -22,7 +22,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
 
             $customer = new Customer($cart->id_customer);
             if (!Validate::isLoadedObject($customer)) {
-                $this->errors[] = $this->module->l('Invalid data (customer)');
+                $this->errors[] = $this->module->l('Invalid data (customer)', 'hostedsession');
                 $this->redirectWithNotifications('index.php?controller=order&step=1');
             }
 

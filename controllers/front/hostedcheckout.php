@@ -119,13 +119,13 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
         $currency = Context::getContext()->currency;
 
         if ($orderId !== $this->module->getNewOrderRef()) {
-            $this->errors[] = $this->module->l('Invalid data (order)');
+            $this->errors[] = $this->module->l('Invalid data (order)', 'hostedcheckout');
             $this->redirectWithNotifications('index.php?controller=order&step=1');
         }
 
         $customer = new Customer($cart->id_customer);
         if (!Validate::isLoadedObject($customer)) {
-            $this->errors[] = $this->module->l('Invalid data (customer)');
+            $this->errors[] = $this->module->l('Invalid data (customer)', 'hostedcheckout');
             $this->redirectWithNotifications('index.php?controller=order&step=1');
         }
 
@@ -154,7 +154,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
                 new OrderStatusResponseHandler(),
             ));
         } catch (Exception $e) {
-            $this->errors[] = $this->module->l('Payment Error');
+            $this->errors[] = $this->module->l('Payment Error', 'hostedcheckout');
             $this->errors[] = $e->getMessage();
             $this->redirectWithNotifications('index.php?controller=order&step=1');
         }
@@ -176,7 +176,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
         }
 
         if (Tools::getValue('cancel')) {
-            $this->warning[] = $this->module->l('Payment was cancelled.');
+            $this->warning[] = $this->module->l('Payment was cancelled.', 'hostedcheckout');
             $this->redirectWithNotifications(Context::getContext()->link->getPageLink('cart', null, null, array(
                 'action' => 'show'
             )));
