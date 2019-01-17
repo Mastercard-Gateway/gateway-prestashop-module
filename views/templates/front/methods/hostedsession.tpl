@@ -24,7 +24,7 @@
 
 <div id="hostedsession_errors" style="color: red; display: none;" class="errors"></div>
 
-<script src="{$hostedsession_component_url}"></script>
+<script async src="{$hostedsession_component_url}"></script>
 <script>
     if (self !== top) {
         top.location = self.location;
