@@ -1,3 +1,10 @@
+{if !$mpgs_gateway_validated}
+	<div class="bootstrap">
+		<div class="module_confirmation conf confirm alert alert-warning">
+			{l s='Payment methods are not configured correctly or the API crendentials are not valid. To activate the payment methods please your details to the forms below.' mod='mastercard'}
+		</div>
+	</div>
+{/if}
 <div class="panel">
 	<div class="row mastercard-header">
 		<img src="{$module_dir|escape:'html':'UTF-8'}views/img/template_1_logo.png" class="col-xs-6 col-md-4 text-center" id="payment-logo" />

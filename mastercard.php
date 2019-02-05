@@ -307,7 +307,10 @@ class Mastercard extends PaymentModule
         }
 
         $this->context->controller->addJS($this->_path.'/views/js/back.js');
-        $this->context->smarty->assign('module_dir', $this->_path);
+        $this->context->smarty->assign([
+            'module_dir' => $this->_path,
+            'mpgs_gateway_validated' => Configuration::get('mpgs_gateway_validated')
+        ]);
         $this->_html .= $this->display($this->local_path, 'views/templates/admin/configure.tpl');
         $this->_html .= $this->renderForm();
 
@@ -438,6 +441,7 @@ class Mastercard extends PaymentModule
             'mpgs_api_url_custom' => Tools::getValue('mpgs_api_url_custom', Configuration::get('mpgs_api_url_custom')),
             'mpgs_lineitems_enabled' => Tools::getValue('mpgs_lineitems_enabled', Configuration::get('mpgs_lineitems_enabled', null, null, null, "1")),
             'mpgs_webhook_url' => Tools::getValue('mpgs_webhook_url', Configuration::get('mpgs_webhook_url')),
+            'mpgs_logging_level' => Tools::getValue('mpgs_logging_level', Configuration::get('mpgs_logging_level', null, null, null, \Monolog\Logger::ERROR)),
 
             'mpgs_merchant_id' => Tools::getValue('mpgs_merchant_id', Configuration::get('mpgs_merchant_id')),
             'mpgs_api_password' => Tools::getValue('mpgs_api_password', Configuration::get('mpgs_api_password')),
@@ -758,6 +762,22 @@ class Mastercard extends PaymentModule
                 ),
                 'input' => array(
                     array(
+                        'type' => 'select',
+                        'label' => $this->l('Logging Verbosity'),
+                        'desc' => $this->l('Allows to set the verbosity level of var/logs/mastercard.log'),
+                        'name' => 'mpgs_logging_level',
+                        'options' => array(
+                            'query' => array(
+                                array('id' => \Monolog\Logger::DEBUG, 'name' => $this->l('Everything')),
+                                array('id' => \Monolog\Logger::WARNING, 'name' => $this->l('Errors and Warning Only')),
+                                array('id' => \Monolog\Logger::ERROR, 'name' => $this->l('Errors Only')),
+                                array('id' => \Monolog\Logger::EMERGENCY, 'name' => $this->l('Disabled')),
+                            ),
+                            'id' => 'id',
+                            'name' => 'name',
+                        ),
+                    ),
+                    array(
                         'type' => 'text',
                         'label' => $this->l('Gateway Order ID Prefix'),
                         'desc' => $this->l('Should be specified in case multiple integrations use the same Merchant ID'),
@@ -771,7 +791,6 @@ class Mastercard extends PaymentModule
                         'name' => 'mpgs_webhook_url',
                         'required' => false
                     ),
-
                 ),
                 'submit' => array(
                     'title' => $this->l('Save'),
@@ -809,6 +828,21 @@ class Mastercard extends PaymentModule
         }
 
         $this->_html .= $this->displayConfirmation($this->l('Settings updated'));
+
+        // Test the Gateway connection
+        try {
+            $client = new GatewayService(
+                $this->getApiEndpoint(),
+                $this->getApiVersion(),
+                $this->getConfigValue('mpgs_merchant_id'),
+                $this->getConfigValue('mpgs_api_password'),
+                $this->getWebhookUrl()
+            );
+            $client->paymentOptionsInquiry();
+            Configuration::updateValue('mpgs_gateway_validated', 1);
+        } catch (Exception $e) {
+            Configuration::updateValue('mpgs_gateway_validated', 0);
+        }
     }
 
     /**
@@ -875,11 +909,11 @@ class Mastercard extends PaymentModule
 
         $methods = array();
 
-        if (Configuration::get('mpgs_hc_active')) {
+        if (Configuration::get('mpgs_hc_active') && Configuration::get('mpgs_gateway_validated')) {
             $methods[] = $this->getHostedCheckoutPaymentOption();
         }
 
-        if (Configuration::get('mpgs_hs_active')) {
+        if (Configuration::get('mpgs_hs_active') && Configuration::get('mpgs_gateway_validated')) {
             $methods[] = $this->getHostedSessionPaymentOption();
         }
 

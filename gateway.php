@@ -181,7 +181,10 @@ class GatewayService
         $this->webhookUrl = $webhookUrl;
 
         $logger = new Logger('mastercard');
-        $logger->pushHandler(new StreamHandler(_PS_ROOT_DIR_.'/var/logs/mastercard.log'));
+        $logger->pushHandler(new StreamHandler(
+            _PS_ROOT_DIR_.'/var/logs/mastercard.log',
+            Configuration::get('mpgs_logging_level')
+        ));
 
         $this->messageFactory = new GuzzleMessageFactory();
 
@@ -705,6 +708,22 @@ class GatewayService
         $response = json_decode($response->getBody(), true);
 
         $this->validateTxnResponse($response);
+
+        return $response;
+    }
+
+    /**
+     * Request to retrieve the options available for processing a payment, for example, the credit cards and currencies.
+     * https://mtf.gateway.mastercard.com/api/rest/version/51/merchant/{merchantId}/paymentOptionsInquiry
+     */
+    public function paymentOptionsInquiry()
+    {
+        $uri = $this->apiUrl . 'paymentOptionsInquiry';
+
+        $request = $this->messageFactory->createRequest('GET', $uri);
+        $response = $this->client->sendRequest($request);
+
+        $response = json_decode($response->getBody(), true);
 
         return $response;
     }

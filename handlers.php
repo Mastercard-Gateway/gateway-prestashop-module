@@ -36,7 +36,10 @@ class ResponseProcessor
     public function __construct($module)
     {
         $this->logger = new Logger('mastercard_handler');
-        $this->logger->pushHandler(new StreamHandler(_PS_ROOT_DIR_.'/var/logs/mastercard.log'));
+        $this->logger->pushHandler(new StreamHandler(
+            _PS_ROOT_DIR_.'/var/logs/mastercard.log',
+            Configuration::get('mpgs_logging_level')
+        ));
         $this->module = $module;
     }
 

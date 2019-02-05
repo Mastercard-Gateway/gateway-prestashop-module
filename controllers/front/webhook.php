@@ -38,7 +38,10 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
     public function init()
     {
         $this->logger = new Logger('mastercard_webhook');
-        $this->logger->pushHandler(new StreamHandler(_PS_ROOT_DIR_.'/var/logs/mastercard.log'));
+        $this->logger->pushHandler(new StreamHandler(
+            _PS_ROOT_DIR_.'/var/logs/mastercard.log',
+            Configuration::get('mpgs_logging_level')
+        ));
 
         if (!$this->module->active) {
             $this->maintenance = true;
