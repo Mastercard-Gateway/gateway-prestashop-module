@@ -425,9 +425,9 @@ class Mastercard extends PaymentModule
             'mpgs_hc_active' => Tools::getValue('mpgs_hc_active', Configuration::get('mpgs_hc_active')),
             'mpgs_hc_title' => $hcTitle,
             'mpgs_hc_theme' => Tools::getValue('mpgs_hc_theme', Configuration::get('mpgs_hc_theme')),
-            'mpgs_hc_show_billing' => Tools::getValue('mpgs_hc_show_billing', Configuration::get('mpgs_hc_show_billing', null, null, null, 'HIDE')),
-            'mpgs_hc_show_email' => Tools::getValue('mpgs_hc_show_email', Configuration::get('mpgs_hc_show_email', null, null, null, 'HIDE')),
-            'mpgs_hc_show_summary' => Tools::getValue('mpgs_hc_show_summary', Configuration::get('mpgs_hc_show_summary', null, null, null, 'HIDE')),
+            'mpgs_hc_show_billing' => Tools::getValue('mpgs_hc_show_billing', Configuration::get('mpgs_hc_show_billing') ? : 'HIDE'),
+            'mpgs_hc_show_email' => Tools::getValue('mpgs_hc_show_email', Configuration::get('mpgs_hc_show_email') ? : 'HIDE'),
+            'mpgs_hc_show_summary' => Tools::getValue('mpgs_hc_show_summary', Configuration::get('mpgs_hc_show_summary') ? : 'HIDE'),
             'mpgs_hc_ga_tracking_id' => Tools::getValue('mpgs_hc_ga_tracking_id', Configuration::get('mpgs_hc_ga_tracking_id')),
 
             'mpgs_hs_active' => Tools::getValue('mpgs_hs_active', Configuration::get('mpgs_hs_active')),
@@ -439,9 +439,9 @@ class Mastercard extends PaymentModule
             'mpgs_order_prefix' => Tools::getValue('mpgs_order_prefix', Configuration::get('mpgs_order_prefix')),
             'mpgs_api_url' => Tools::getValue('mpgs_api_url', Configuration::get('mpgs_api_url')),
             'mpgs_api_url_custom' => Tools::getValue('mpgs_api_url_custom', Configuration::get('mpgs_api_url_custom')),
-            'mpgs_lineitems_enabled' => Tools::getValue('mpgs_lineitems_enabled', Configuration::get('mpgs_lineitems_enabled', null, null, null, "1")),
+            'mpgs_lineitems_enabled' => Tools::getValue('mpgs_lineitems_enabled', Configuration::get('mpgs_lineitems_enabled') ? : "1"),
             'mpgs_webhook_url' => Tools::getValue('mpgs_webhook_url', Configuration::get('mpgs_webhook_url')),
-            'mpgs_logging_level' => Tools::getValue('mpgs_logging_level', Configuration::get('mpgs_logging_level', null, null, null, \Monolog\Logger::ERROR)),
+            'mpgs_logging_level' => Tools::getValue('mpgs_logging_level', Configuration::get('mpgs_logging_level') ? : \Monolog\Logger::ERROR),
 
             'mpgs_merchant_id' => Tools::getValue('mpgs_merchant_id', Configuration::get('mpgs_merchant_id')),
             'mpgs_api_password' => Tools::getValue('mpgs_api_password', Configuration::get('mpgs_api_password')),
@@ -807,8 +807,11 @@ class Mastercard extends PaymentModule
         $form_values = $this->getAdminFormValues();
 
         // Handles normal fields
-        foreach (array_keys($form_values) as $key) {
-            Configuration::updateValue($key, Tools::getValue($key));
+        foreach ($form_values as $key => $value) {
+            if (is_array($value)) {
+                continue;
+            }
+            Configuration::updateValue($key, $value);
         }
 
         // Handles translated fields
