@@ -183,7 +183,7 @@ class RefundResponseHandler extends TransactionResponseHandler
             return;
         }
 
-        $amount = number_format(floatval($response['transaction']['amount']) * -1, 2, '.', '');
+        $amount = number_format((float) $response['transaction']['amount'] * -1, 2, '.', '');
         $this->addOrderPayment(
             $order,
             $amount,

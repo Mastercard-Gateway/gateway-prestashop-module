@@ -234,8 +234,8 @@ class GatewayService
             return null;
         }
 
-        if ($limited > 0 && strlen($value) > $limited) {
-            return substr($value, 0, $limited);
+        if ($limited > 0 && Tools::strlen($value) > $limited) {
+            return Tools::substr($value, 0, $limited);
         }
 
         return $value;

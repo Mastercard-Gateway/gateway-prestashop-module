@@ -118,7 +118,7 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
             $this->emitServerError('HTTP Client Error');
         }
 
-        $content = file_get_contents('php://input');
+        $content = Tools::file_get_contents('php://input');
         $content = trim($content);
 
         $contentParsed = @json_decode($content, true);
@@ -168,7 +168,7 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
         $mpgsOrderId = $response['order']['id'];
         $prefix = Configuration::get('mpgs_order_prefix');
         if ($prefix) {
-            $mpgsOrderId = substr($mpgsOrderId, strlen($prefix));
+            $mpgsOrderId = Tools::substr($mpgsOrderId, Tools::strlen($prefix));
         }
 
         /** @var Order $order */

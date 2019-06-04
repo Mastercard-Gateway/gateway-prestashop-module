@@ -331,19 +331,19 @@ class Mastercard extends PaymentModule
             if (!Tools::getValue('mpgs_merchant_id')) {
                 $this->_postErrors[] = $this->l('Merchant ID is required.');
             }
-            if (!Tools::getValue('mpgs_api_password')) {
-                $this->_postErrors[] = $this->l('API password is required.');
-            }
-            if (!Tools::getValue('mpgs_webhook_secret')) {
-                $this->_postErrors[] = $this->l('Webhook Secret is required.');
-            }
+//            if (!Tools::getValue('mpgs_api_password')) {
+//                $this->_postErrors[] = $this->l('API password is required.');
+//            }
+//            if (!Tools::getValue('mpgs_webhook_secret')) {
+//                $this->_postErrors[] = $this->l('Webhook Secret is required.');
+//            }
         } else {
             if (!Tools::getValue('test_mpgs_merchant_id')) {
                 $this->_postErrors[] = $this->l('Test Merchant ID is required.');
             }
-            if (!Tools::getValue('test_mpgs_api_password')) {
-                $this->_postErrors[] = $this->l('Test API password is required.');
-            }
+//            if (!Tools::getValue('test_mpgs_api_password')) {
+//                $this->_postErrors[] = $this->l('Test API password is required.');
+//            }
             // In test mode, the Secret is not required
 //            if (!Tools::getValue('test_mpgs_webhook_secret')) {
 //                $this->_postErrors[] = $this->l('Test Webhook Secret is required.');
@@ -712,16 +712,16 @@ class Mastercard extends PaymentModule
                         'required' => true
                     ),
                     array(
-                        'type' => 'text',
+                        'type' => 'password',
                         'label' => $this->l('API Password'),
                         'name' => 'mpgs_api_password',
                         'required' => true
                     ),
                     array(
-                        'type' => 'text',
+                        'type' => 'password',
                         'label' => $this->l('Webhook Secret'),
                         'name' => 'mpgs_webhook_secret',
-                        'required' => true
+                        'required' => false
                     ),
                     array(
                         'type' => 'text',
@@ -730,13 +730,13 @@ class Mastercard extends PaymentModule
                         'required' => true
                     ),
                     array(
-                        'type' => 'text',
+                        'type' => 'password',
                         'label' => $this->l('Test API Password'),
                         'name' => 'test_mpgs_api_password',
                         'required' => true
                     ),
                     array(
-                        'type' => 'text',
+                        'type' => 'password',
                         'label' => $this->l('Test Webhook Secret'),
                         'name' => 'test_mpgs_webhook_secret',
                         'required' => false
@@ -810,6 +810,11 @@ class Mastercard extends PaymentModule
         foreach ($form_values as $key => $value) {
             if (is_array($value)) {
                 continue;
+            }
+            if (in_array($key, ['mpgs_api_password', 'test_mpgs_api_password', 'mpgs_webhook_secret', 'test_mpgs_webhook_secret'])) {
+                if (!$value) {
+                    continue;
+                }
             }
             Configuration::updateValue($key, $value);
         }
