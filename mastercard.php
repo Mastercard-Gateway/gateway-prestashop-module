@@ -46,6 +46,8 @@ class Mastercard extends PaymentModule
      */
     public function __construct()
     {
+        $this->module_key = 'c1614c239af92968e5fae97f366e9961';
+
         $this->name = 'mastercard';
         $this->tab = 'payments_gateways';
 
