@@ -21,21 +21,22 @@ Please refer to official Prestashop documentation for general installation guide
 
 ## General settings
 
-Once you have Mastercard Payment Gateway Service module installed you can configure the module from admin panel.
+Once you have the Mastercard Payment Gateway Service module installed, you can configure the module from admin panel.
 
 Find the relevant Configure button under your Module Manager:
 
 ![](docs/images/configure_button.png)
 
-Firstly, it’s important to configure your Merchant credentials in TEST mode and make sure that everything works.
 
-Note: that if merchant credentials are not configured correctly, you can not enable any of the modules payment methods.
 
-If the credentials are incorrect for any reason, there will be a warning displayed on the top of the configuration page.
+Firstly, it’s important to configure your gateway credentials in TEST mode and make sure that everything works.
+
+Note: that if gateway credentials are not configured correctly, you can not enable any of the modules payment methods.
+
+If the gateway credentials are incorrect for any reason, there will be a warning displayed on the top of the configuration page.
 
 ![](docs/images/incorrect_credentails.png)
 
-  
 The General Settings view:
 
 ![](docs/images/general_setting_view.png)
@@ -44,18 +45,16 @@ The General Settings view:
 |--|--|
 | Live Mode | Yes/No. Toggles between Test and Live mode. Both modes have their own set of credential fields which you need to fill separately. It gives you the ability to switch between modes without re-entering your credentials every time. |
 | API Endpoint | The API endpoint should be selected based on your account region.|
-|Send Line Items |Yes/No. This setting allows you to choose if you want shopping cart data to be sent to MasterCard, this includes product information, grand total, etc. |
+|Send Line Items |Yes/No. This setting allows you to choose if you want shopping cart data to be sent to the gateway, this includes product information, grand total, etc. |
 |Test Merchant ID / Merchant ID |Your merchant ID. |
 |Test API Password / API Password | Your merchant API password.|
 |Test Webhook Secret / Webhook Secret | If webhook support is enabled, then enter your webhook secret here.|
 
 ## Hosted Checkout integration
 
-The Hosted Checkout model allows you to collect payment details from your payer through an interaction hosted and displayed by the Mastercard Payment Gateway. With this model of integration, you never see or handle payment details directly because these are collected by the hosted payment interface and submitted directly from the payer's browser to the Mastercard Payment Gateway.
+The Hosted Checkout model allows you to collect payment details from your payer through a payment page displayed within a lightbox hosted by the payment gateway. You never see or handle payment details directly because these are collected by the hosted payment interface and submitted directly from the payer's browser to the payment gateway.
 
 ![](docs/images/payer_browser.png)
-
-If Hosted Checkout is integrated and enabled for Mastercard Payment Gateway module, then once user will enter required card details on popup and click on submit order, then upon successfully authorization of entered card details, funds will be deducted from user’s account and will be automatically transferred to merchant/seller’s account. It may take some time to get funds credited but this process will be automatic.
 
 Below are list of Hosted Checkout method configuration which you will find in the administration interface:
 
@@ -65,7 +64,7 @@ Below are list of Hosted Checkout method configuration which you will find in th
 |--|--|
 |Enabled | Two Options are available: <br> **YES** - to enable this payment method for Mastercard Payment Gateway Module <br> **NO** - to disable this payment method |
 |Title |Text mentioned here will be appear on front-end checkout page / payment method section. |
-| Theme|Effect of entered theme name will apply on Mastercard Payment Gateway popup on which user will enter their card details. |
+| Theme| Leave blank unless indicated by your payment provider. |
 |Google Analytics Tracking ID |If Analytics tracking ID will be included, then all the order placed using MPGS payment option will be tracked and records will be updated under that Google Analytics account. |
 |Order Summary display |Select any One option from below: <br>**Hide**  - to not display any order and card details to user before submitting order <br> **Show**  - to display order and entered card details to user before submitting order <br> **Show (without payment details)**  - to display only order details to user before submitting order |
 
@@ -90,27 +89,27 @@ Below is list of all configuration options you will see under Hosted Session pay
 | Enabled | Two Options are available: <br>**YES**  - to enable this payment method for Mastercard Payment Gateway Module <br>**NO**  - to disable this payment method |
 |Title|Text mentioned here will be appear on front-end checkout page / payment method section|
 |Payment Model|Select any One option from below: <br>**Purchase**  - Fund will be transferred to merchant account as soon as user’s entered card details has been successfully verified and order is placed. <br>**Authorize & Capture**  - 2 stage process; where once order will place, it will only authorize user’s card details. Payment amount need to be captured manually by merchant. |
-|3D Secure |Two Options are available: <br> **YES**  - to add extra layer of security for completing order process. After user will enter card details, it will redirect to user's bank payment gateway for verification. <br> **NO**  - After placing order and entered card details has been verified, the order will be placed. No extra layer of security will be there. |
+|3D Secure |Two Options are available: <br> **YES**  - After the payer has entered their card details, they will be redirected to the their bank's authentication service for verification. <br> **NO**  - After placing order and entered card details has been verified, the order will be placed. |
 
 ## Back-office Operations
-If Hosted Session has been integrated for Mastercard Payment Gateway Service module and Authorize & Capture payment method has been selected, then Funds need to be captured or refund manually.
+If Authorize & Capture payment method has been selected, then Funds need to be captured or refund manually.
 
 ### To Capture Funds
 
-Capture Payment is used for processing transaction and getting order funds into merchant’s account.
+Capture Payment is used for processing transaction and transfering funds into the merchant’s account.
 
 -   Under Order detail page, when clicking on “Capture Payment” button it will process transactions and amount of order will be transferred to merchant's account.
--   After clicking on “Capture Payment”, page will be load and you will get success message Also, Order status will be changed to “Payment Accept”.
+-   After clicking on the “Capture Payment” button, the gateway will capture the tranaction and then you will see a success message. The order status will also change to “Payment Accept”.
 
 ![](docs/images/order_detail_payment.png)
 
 ### Void Transaction
 
-Void Transaction is used to cancel order if merchant finds any fraud/suspect in that order. By clicking on “Void Transaction” button, order will be cancelled automatically and amount of order will be credited to user’s card (if payment has been captured).
+Void Transaction is used to cancel the order. By clicking on “Void Transaction” button, the order will be cancelled automatically and the amount of the order will be credited to user’s card (if payment has been captured).
 
 ### Refund Payment
 
-Once Payment has been captured by merchant using Capture Payment option, then for that Order, merchant will find option to refund payment.
+Once Payment has been captured by merchant using the Capture Payment option, the merchant may be later required to refund the payment.
 
 -   Select Order for which payment has been captured and now amount needs to be refunded to user.
     
@@ -127,7 +126,7 @@ Once Payment has been captured by merchant using Capture Payment option, then fo
 
 
 ## Advanced Configurations
-Below are list of advanced configurations which you will find under Mastercard Payment Gateway Service Module.
+Below is the list of advanced configurations for the Mastercard Payment Gateway Service module.
 
 ![](docs/images/advance_configuration.png)
 
