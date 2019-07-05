@@ -67,7 +67,7 @@ Below are list of Hosted Checkout method configuration which you will find in ad
 ## Hosted Session integration
 Choose the Hosted Session model if you want control over the layout and styling of your payment page, while reducing PCI compliance costs. The Hosted Session JavaScript client library enables you to collect sensitive payment details from the payer in payment form fields, sourced from and controlled by Mastercard Payment Gateway. The gateway collects the payment details in a payment session and temporarily stores them for later use. You can then include a payment session in place of payment details in the transaction request to process a payment.
 
-![](docs/images/hosted_session_payment.png)
+<img src="docs/images/hosted_session_payment.png" alt="session payment" width="600"/>
 
 There are two different payment flow methods under Hosted session integration:
 
