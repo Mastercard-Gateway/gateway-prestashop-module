@@ -1,22 +1,27 @@
 # Mastercard Payment Gateway Services module for PrestaShop
 
-## Installation in PrestaShop
-You can obtain the module by downloading a release from: [https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases](https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases) - the module is licensed using  [OSL 3.0](https://opensource.org/licenses/OSL-3.0).
+## Compatibility
 
-The module has been tested with the PrestaShop versions
+The module has been tested with the PrestaShop versions:
 - 1.7.4.4
 - 1.7.5.0, 
 
-and with PHP versions
+and with PHP versions:
 - 7.1
 - 7.2.
+
+## Obtain the module
+
+You can obtain the module by downloading a release from: [https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases](https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases) - the module is licensed using  [OSL 3.0](https://opensource.org/licenses/OSL-3.0).
+
+## Installation in PrestaShop
 
 Please refer to official Prestashop documentation for general installation guidelines  
 [https://addons.prestashop.com/en/content/13-installing-modules](https://addons.prestashop.com/en/content/13-installing-modules)
 
 ## General settings
 
-Once you have Mastercard Payment Gateway Service module installed you can configure module from admin panel.
+Once you have Mastercard Payment Gateway Service module installed you can configure the module from admin panel.
 
 Find the relevant Configure button under your Module Manager:
 
@@ -52,7 +57,7 @@ The Hosted Checkout model allows you to collect payment details from your payer 
 
 If Hosted Checkout is integrated and enabled for Mastercard Payment Gateway module, then once user will enter required card details on popup and click on submit order, then upon successfully authorization of entered card details, funds will be deducted from user’s account and will be automatically transferred to merchant/seller’s account. It may take some time to get funds credited but this process will be automatic.
 
-Below are list of Hosted Checkout method configuration which you will find in admin:
+Below are list of Hosted Checkout method configuration which you will find in the administration interface:
 
 ![](docs/images/hosted_checkout_method.png)
 
@@ -65,7 +70,7 @@ Below are list of Hosted Checkout method configuration which you will find in ad
 |Order Summary display |Select any One option from below: <br>**Hide**  - to not display any order and card details to user before submitting order <br> **Show**  - to display order and entered card details to user before submitting order <br> **Show (without payment details)**  - to display only order details to user before submitting order |
 
 ## Hosted Session integration
-Choose the Hosted Session model if you want control over the layout and styling of your payment page, while reducing PCI compliance costs. The Hosted Session JavaScript client library enables you to collect sensitive payment details from the payer in payment form fields, sourced from and controlled by Mastercard Payment Gateway. The gateway collects the payment details in a payment session and temporarily stores them for later use. You can then include a payment session in place of payment details in the transaction request to process a payment.
+Choose the Hosted Session model if you want control over the layout and styling of your payment page. The Hosted Session JavaScript client library enables you to collect sensitive payment details from the payer in payment form fields, sourced from and controlled by Mastercard Payment Gateway. The gateway collects the payment details in a payment session and temporarily stores them for later use. You can then include a payment session in place of payment details in the transaction request to process a payment.
 
 <img src="docs/images/hosted_session_payment.png" alt="session payment" width="600"/>
 
@@ -132,4 +137,4 @@ Below are list of advanced configurations which you will find under Mastercard P
 |Gateway Order ID Prefix |**Default Option**: Blank<br>In case one Merchant ID is used by multiple installation, then this field can be used to add a prefix to order id-s so that they will not conflict in the gateway. |
 |Custom Webhook Endpoint |**Default Option**: Blank<br>This field is mostly only used by development or with some complex web server rules, where the URL is not automatically detected correctly. |
 
-It is suggested to keep these fields with assigned default value. If required, then do required configuration changes based on your need but first consult with Technical team / Mastercard Payment Gateway Module support for these.
+It is suggested to keep these fields with assigned default value. Please first consult with Technical team / Mastercard Payment Gateway Module support before changing these settings.
