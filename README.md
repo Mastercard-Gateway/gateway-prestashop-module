@@ -1,9 +1,15 @@
 # Mastercard Payment Gateway Services module for PrestaShop
 
 ## Installation in PrestaShop
-You can obtain the module by downloading the following zip file: [prestashop-mastercard-1.0.0.zip](http://wiki.ontapgroup.com/download/attachments/5473094/prestashop-mastercard-1.0.0.zip?version=1&modificationDate=1561000810602&api=v2) - the module is licensed using  [OSL 3.0](https://opensource.org/licenses/OSL-3.0).
+You can obtain the module by downloading a release from: [https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases](https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases) - the module is licensed using  [OSL 3.0](https://opensource.org/licenses/OSL-3.0).
 
-The module has been tested with the PrestaShop 1.7.4.4 and 1.7.5.0, and PHP 7.1 and 7.2.
+The module has been tested with the PrestaShop versions
+- 1.7.4.4
+- 1.7.5.0, 
+
+and with PHP versions
+- 7.1
+- 7.2.
 
 Please refer to official Prestashop documentation for general installation guidelines  
 [https://addons.prestashop.com/en/content/13-installing-modules](https://addons.prestashop.com/en/content/13-installing-modules)
@@ -14,7 +20,7 @@ Once you have Mastercard Payment Gateway Service module installed you can config
 
 Find the relevant Configure button under your Module Manager:
 
-![](https://lh3.googleusercontent.com/FiRDd14ElKzaekb_SDC2FAbBIuz7cj1Zu61NHBm4YlMRvIoaJJ3JQVSyh7hkxDgl_LgNiMOKBMrKWlVmylwLG6JQskRULoRS2WovPj7X-5FfhOjwgEe4jH5cBpBZRvKW62hIxntq)
+![](docs/images/configure_button.png)
 
 Firstly, it’s important to configure your Merchant credentials in TEST mode and make sure that everything works.
 
@@ -22,12 +28,12 @@ Note: that if merchant credentials are not configured correctly, you can not ena
 
 If the credentials are incorrect for any reason, there will be a warning displayed on the top of the configuration page.
 
-![](https://lh4.googleusercontent.com/bJTT2CnpNOy-EQAkGkAl0uXI9p00tJF7y1KUIJgo5qDx0cBk7o4zomLkFMea-6N8ErRg1ZVPoLvA-2ZzZTI0TLzuC6kUQHKjEi1R7Py0J9ICM3jv11hBVoBTw1ya2jWFrQ35S67c)
+![](docs/images/incorrect_credentails.png)
 
   
 The General Settings view:
 
-![](https://lh6.googleusercontent.com/vBBb75WoewfdFvjMdC2EpBgHizGZF-Q2NrsRKL2gbvwJ5GhhUUO6t3sYrXjesNTR5bGB4QMAElFpOX3Xb8zLBSxl7IsWWXfE1W0HezsBV3e-T8NOiOdBxucri7dfQdn4aRsZYaj5)
+![](docs/images/general_setting_view.png)
 
 | Name | Description |
 |--|--|
@@ -42,13 +48,13 @@ The General Settings view:
 
 The Hosted Checkout model allows you to collect payment details from your payer through an interaction hosted and displayed by the Mastercard Payment Gateway. With this model of integration, you never see or handle payment details directly because these are collected by the hosted payment interface and submitted directly from the payer's browser to the Mastercard Payment Gateway.
 
-![](https://lh6.googleusercontent.com/bXaSTtwkM_4lPsItSJWpB-WEx1185kvt-ciXcM15NMT-HonNw55gPCdXQ6OBiqyZR0GJkV89SykKQFDnuYyqhX2Mr3YMauI7IrqEUJInlgY_16-k-prsU_jyg1sGL9X_gFen2Ogo)
+![](docs/images/payer_browser.png)
 
 If Hosted Checkout is integrated and enabled for Mastercard Payment Gateway module, then once user will enter required card details on popup and click on submit order, then upon successfully authorization of entered card details, funds will be deducted from user’s account and will be automatically transferred to merchant/seller’s account. It may take some time to get funds credited but this process will be automatic.
 
 Below are list of Hosted Checkout method configuration which you will find in admin:
 
-![](https://lh5.googleusercontent.com/kK6rUf8Kry2NYpbCTojQvvptOMAYPpgXe93ULWhu1ExsP0hSIoRYnhcOqrre3Abnu6zvUBxEhV9sz18eWy4QvLwn51t4KfFIcUaop8jWUFRJGiIFhTp5OCEs4dCR8p8bp3vXqA57)
+![](docs/images/hosted_checkout_method.png)
 
 |Name|Description  |
 |--|--|
@@ -61,7 +67,7 @@ Below are list of Hosted Checkout method configuration which you will find in ad
 ## Hosted Session integration
 Choose the Hosted Session model if you want control over the layout and styling of your payment page, while reducing PCI compliance costs. The Hosted Session JavaScript client library enables you to collect sensitive payment details from the payer in payment form fields, sourced from and controlled by Mastercard Payment Gateway. The gateway collects the payment details in a payment session and temporarily stores them for later use. You can then include a payment session in place of payment details in the transaction request to process a payment.
 
-![](https://lh6.googleusercontent.com/y0ewlEgJA5uJQ53uFVWiM0S_7y4XV3niLADhiYCYZQ4MZPqt1aP7B3Ti2TlDnD0rUlK3PcDOXStn-WS_9JCSnruq2ncL2g4528911eWkEegUmgfuFf29DJqfot39xmkmbV28tkZt)
+![](docs/images/hosted_session_payment.png)
 
 There are two different payment flow methods under Hosted session integration:
 
@@ -72,7 +78,7 @@ There are two different payment flow methods under Hosted session integration:
 
 Below is list of all configuration options you will see under Hosted Session payment method for Mastercard Payment Gateway service Module:
 
-![](https://lh5.googleusercontent.com/Clpgk6oQoimTIVSDXERU7FM7ws1cJakR1s-jQzXP0lngbNL_RmBOVbjc9Z8E2gN45LQCCGabN-nSqkFhDwYqOvqgu3xzqGip9CC2BGxN9DyckYmmlrwp1PJeSjihp6-SRR5TGei-)
+![](docs/images/hosted_session_setting.png)
 
 |Name|Description|
 |--|--|
@@ -91,7 +97,7 @@ Capture Payment is used for processing transaction and getting order funds into 
 -   Under Order detail page, when clicking on “Capture Payment” button it will process transactions and amount of order will be transferred to merchant's account.
 -   After clicking on “Capture Payment”, page will be load and you will get success message Also, Order status will be changed to “Payment Accept”.
 
-![](https://lh6.googleusercontent.com/goDmDIEHGh9j8eWuMQ1Og-fe61_4NAzWxNUyZ-2_nHajaw91p7s7rpnBUaFxnPwtlqkhCHd-kFWFmyp8juO3T6VXXnHyAI5CNBluO3JyOzcqXZyDDLrCmGnhYr6E6D7PIIml9iqC)
+![](docs/images/order_detail_payment.png)
 
 ### Void Transaction
 
@@ -108,7 +114,7 @@ Once Payment has been captured by merchant using Capture Payment option, then fo
 -   Check Mastercard Payment Action (Online) tab.
     
 -   Here, Full Refund button will be find from where merchant can refund full amount captured for that order.  
-    ![](https://lh6.googleusercontent.com/UrwQ5_f1YPD3_guWilw-QrnygcDRMZ20oxLVN2Pt92Kbm03NEFKYo-bRQnOFYem8Xu4XzDlGh-_iEH2G9mDgmzEDYDHHeqfBPTFD2q7ttIRUwTZzKYpfLHAUbPQ2oeiqK14Apggg)
+    ![](docs/images/refund.png)
     
 -   On clicking on Full Refund button, amount will be refunded to user.
     
@@ -118,7 +124,7 @@ Once Payment has been captured by merchant using Capture Payment option, then fo
 ## Advanced Configurations
 Below are list of advanced configurations which you will find under Mastercard Payment Gateway Service Module.
 
-![](https://lh4.googleusercontent.com/2Et3AQgcu7CYi5Qqr2HEpYmYLVso5xi_8OVlpzfniW4vh8JoY-HLJqXHFNZG9GsV9DWMziG4G19g7XGOMehyEx_Z-ZPqJiqQ7YswwrhTc9AT1aX-1o-DOc2xBL-HjOrELYjyb0gL)
+![](docs/images/advance_configuration.png)
 
 |Name|Description  |
 |--|--|
