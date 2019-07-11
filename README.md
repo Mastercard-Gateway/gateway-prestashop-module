@@ -4,7 +4,8 @@
 
 The module has been tested with the PrestaShop versions:
 - 1.7.4.4
-- 1.7.5.0, 
+- 1.7.5.0
+- 1.7.5.2
 
 and with PHP versions:
 - 7.1
