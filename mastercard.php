@@ -447,11 +447,11 @@ class Mastercard extends PaymentModule
 
             'mpgs_merchant_id' => Tools::getValue('mpgs_merchant_id', Configuration::get('mpgs_merchant_id')),
             'mpgs_api_password' => Tools::getValue('mpgs_api_password', Configuration::get('mpgs_api_password')),
-            'mpgs_webhook_secret' => Tools::getValue('mpgs_webhook_secret', Configuration::get('mpgs_webhook_secret')),
+            'mpgs_webhook_secret' => Tools::getValue('mpgs_webhook_secret', Configuration::get('mpgs_webhook_secret') ? : null),
 
             'test_mpgs_merchant_id' => Tools::getValue('test_mpgs_merchant_id', Configuration::get('test_mpgs_merchant_id')),
             'test_mpgs_api_password' => Tools::getValue('test_mpgs_api_password', Configuration::get('test_mpgs_api_password')),
-            'test_mpgs_webhook_secret' => Tools::getValue('test_mpgs_webhook_secret', Configuration::get('test_mpgs_webhook_secret')),
+            'test_mpgs_webhook_secret' => Tools::getValue('test_mpgs_webhook_secret', Configuration::get('test_mpgs_webhook_secret') ? : null),
         );
     }
 
