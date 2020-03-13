@@ -6,10 +6,13 @@ The module has been tested with the PrestaShop versions:
 - 1.7.4.4
 - 1.7.5.0
 - 1.7.5.2
+- 1.7.6.2
+- 1.7.6.4
 
 and with PHP versions:
 - 7.1
-- 7.2.
+- 7.2
+- 7.3
 
 ## Obtain the module
 
