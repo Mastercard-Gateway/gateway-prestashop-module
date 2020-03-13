@@ -139,6 +139,11 @@
             return;
         }
 
+        if (typeof PaymentSession === "undefined") {
+            loadPaymentSession();
+            return;
+        }
+
         hsLoading = true;
 
         PaymentSession.configure({
