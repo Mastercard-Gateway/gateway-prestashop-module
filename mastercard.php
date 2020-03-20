@@ -64,7 +64,7 @@ class Mastercard extends PaymentModule
         $this->name = 'mastercard';
         $this->tab = 'payments_gateways';
 
-        $this->version = '1.0.1';
+        $this->version = '1.1.0';
         if (!defined('MPGS_VERSION')) {
             define('MPGS_VERSION', $this->version);
         }
