@@ -69,7 +69,6 @@ Below are list of Hosted Checkout method configuration which you will find in th
 |Enabled | Two Options are available: <br> **YES** - to enable this payment method for Mastercard Payment Gateway Module <br> **NO** - to disable this payment method |
 |Title |Text mentioned here will be appear on front-end checkout page / payment method section. |
 | Theme| Leave blank unless indicated by your payment provider. |
-|Google Analytics Tracking ID |If Analytics tracking ID will be included, then all the order placed using MPGS payment option will be tracked and records will be updated under that Google Analytics account. |
 |Order Summary display |Select any One option from below: <br>**Hide**  - to not display any order and card details to user before submitting order <br> **Show**  - to display order and entered card details to user before submitting order <br> **Show (without payment details)**  - to display only order details to user before submitting order |
 
 ## Hosted Session integration

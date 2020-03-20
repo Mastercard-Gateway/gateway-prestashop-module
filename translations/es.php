@@ -41,7 +41,6 @@ $_MODULE['<{mastercard}prestashop>mastercard_00d23a76e43b46dae9ec7aa9dcbebb32'] 
 $_MODULE['<{mastercard}prestashop>mastercard_b9f5c797ebbf55adccdd8539a65a0241'] = 'Desactivado';
 $_MODULE['<{mastercard}prestashop>mastercard_b78a3223503896721cca1303f776159b'] = 'Titulo';
 $_MODULE['<{mastercard}prestashop>mastercard_d721757161f7f70c5b0949fdb6ec2c30'] = 'Apariencia';
-$_MODULE['<{mastercard}prestashop>mastercard_851bd83a102d143ee17d97f9e15e15af'] = 'Google Analytics Tracking ID';
 $_MODULE['<{mastercard}prestashop>mastercard_b2982cccbf009977e72aa6e4796f8fed'] = 'Mostrar Direccion de Facturacion';
 $_MODULE['<{mastercard}prestashop>mastercard_62a5e490880a92eef74f167d9dc6dca0'] = 'Ocultar';
 $_MODULE['<{mastercard}prestashop>mastercard_e89ab59baea830bd940c300886c50efe'] = 'Obligatorio';

@@ -443,7 +443,6 @@ class Mastercard extends PaymentModule
             'mpgs_hc_show_billing' => Tools::getValue('mpgs_hc_show_billing', Configuration::get('mpgs_hc_show_billing') ? : 'HIDE'),
             'mpgs_hc_show_email' => Tools::getValue('mpgs_hc_show_email', Configuration::get('mpgs_hc_show_email') ? : 'HIDE'),
             'mpgs_hc_show_summary' => Tools::getValue('mpgs_hc_show_summary', Configuration::get('mpgs_hc_show_summary') ? : 'HIDE'),
-            'mpgs_hc_ga_tracking_id' => Tools::getValue('mpgs_hc_ga_tracking_id', Configuration::get('mpgs_hc_ga_tracking_id')),
 
             'mpgs_hs_active' => Tools::getValue('mpgs_hs_active', Configuration::get('mpgs_hs_active')),
             'mpgs_hs_title' => $hsTitle,
@@ -510,12 +509,6 @@ class Mastercard extends PaymentModule
                         'type' => 'text',
                         'label' => $this->l('Theme'),
                         'name' => 'mpgs_hc_theme',
-                        'required' => false
-                    ),
-                    array(
-                        'type' => 'text',
-                        'label' => $this->l('Google Analytics Tracking ID'),
-                        'name' => 'mpgs_hc_ga_tracking_id',
                         'required' => false
                     ),
 //                    array(
