@@ -79,23 +79,20 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount(),
         );
 
-        $address = new Address(Context::getContext()->cart->id_address_invoice);
-        $country = new Country($address->id_country);
-        $billing = array(
-            'address' => array(
-                'city' => GatewayService::safe($address->city, 100),
-                'country' => $this->module->iso2ToIso3($country->iso_code),
-                'postcodeZip' => GatewayService::safe($address->postcode, 10),
-                'street' => GatewayService::safe($address->address1, 100),
-                'street2' => GatewayService::safe($address->address2, 100),
-            )
-        );
+        /** @var ContextCore $context */
+        $context = Context::getContext();
 
-        $customerData = array(
-            'email' => GatewayService::safe($customer->email),
-            'firstName' => GatewayService::safe($customer->firstname, 50),
-            'lastName' => GatewayService::safe($customer->lastname, 50),
-        );
+        /** @var CartCore $cart */
+        $cart = $context->cart;
+
+        /** @var AddressCore $billingAddress */
+        $billingAddress = new Address($cart->id_address_invoice);
+
+        /** @var AddressCore $shippingAddress */
+        $shippingAddress = new Address($cart->id_address_delivery);
+
+        /** @var CustomerCore $customer */
+        $customer = Context::getContext()->customer;
 
         // Create order before the payment occurs
         $this->module->validateOrder(
@@ -120,8 +117,10 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
                 $orderData,
                 $this->threeDSecureData ? : null,
                 $session,
-                $customerData,
-                $billing
+                $this->getContactForGateway($customer),
+                $this->getAddressForGateway($billingAddress),
+                $this->getAddressForGateway($shippingAddress),
+                $this->getContactForGateway($shippingAddress)
             );
 
             $processor = new ResponseProcessor($this->module);
@@ -137,8 +136,10 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
                 $orderData,
                 $this->threeDSecureData ? : null,
                 $session,
-                $customerData,
-                $billing
+                $this->getContactForGateway($customer),
+                $this->getAddressForGateway($billingAddress),
+                $this->getAddressForGateway($shippingAddress),
+                $this->getContactForGateway($shippingAddress)
             );
 
             $processor = new ResponseProcessor($this->module);

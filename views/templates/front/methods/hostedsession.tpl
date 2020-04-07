@@ -144,6 +144,11 @@
             return;
         }
 
+        if (document.getElementById('card-number') === null) {
+            loadPaymentSession();
+            return;
+        }
+
         hsLoading = true;
 
         PaymentSession.configure({

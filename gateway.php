@@ -255,6 +255,20 @@ class GatewayService
     }
 
     /**
+     * @param string $class
+     * @param string $property
+     * @param int $limited
+     * @return bool|string|null
+     */
+    public static function safeProperty($class, $property, $limited = 0)
+    {
+        if (!property_exists($class, $property)) {
+            return null;
+        }
+        return static::safe($class->{$property}, $limited);
+    }
+
+    /**
      * @param mixed $value
      * @return string
      */
@@ -386,6 +400,8 @@ class GatewayService
      * @param array $interaction
      * @param array $customer
      * @param array $billing
+     * @param array $shipping
+     * @param array $shippingContact
      * @return array
      * @throws Exception
      * @throws GatewayResponseException
@@ -394,7 +410,9 @@ class GatewayService
         $order = array(),
         $interaction = array(),
         $customer = array(),
-        $billing = array()
+        $billing = array(),
+        $shipping = array(),
+        $shippingContact = array()
     ) {
         $uri = $this->apiUrl . 'session';
 
@@ -404,7 +422,13 @@ class GatewayService
             'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
             )),
-            'billing' => $billing,
+            'billing' => array(
+                'address' => $billing
+            ),
+            'shipping' => array(
+                'address' => $shipping,
+                'contact' => $shippingContact
+            ),
             'interaction' => $interaction,
             'customer' => $customer,
         )));
@@ -429,6 +453,8 @@ class GatewayService
      * @param array $session
      * @param array $customer
      * @param array $billing
+     * @param array $shipping
+     * @param array $shippingContact
      * @return mixed|ResponseInterface
      * @throws Exception
      */
@@ -438,7 +464,9 @@ class GatewayService
         $theeDSecure = null,
         $session = array(),
         $customer = array(),
-        $billing = array()
+        $billing = array(),
+        $shipping = array(),
+        $shippingContact = array()
     ) {
         $txnId = '1';
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
@@ -450,7 +478,13 @@ class GatewayService
             'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
             )),
-            'billing' => $billing,
+            'billing' => array(
+                'address' => $billing
+            ),
+            'shipping' => array(
+                'address' => $shipping,
+                'contact' => $shippingContact,
+            ),
             'customer' => $customer,
             'sourceOfFunds' => array(
                 'type' => 'CARD'
@@ -481,6 +515,8 @@ class GatewayService
      * @param array $session
      * @param array $customer
      * @param array $billing
+     * @param array $shipping
+     * @param array $shippingContact
      * @return mixed|ResponseInterface
      * @throws Exception
      */
@@ -490,7 +526,9 @@ class GatewayService
         $theeDSecure = null,
         $session = array(),
         $customer = array(),
-        $billing = array()
+        $billing = array(),
+        $shipping = array(),
+        $shippingContact = array()
     ) {
         $txnId = '1';
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
@@ -502,7 +540,13 @@ class GatewayService
             'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
             )),
-            'billing' => $billing,
+            'billing' => array(
+                'address' => $billing
+            ),
+            'shipping' => array(
+                'address' => $shipping,
+                'contact' => $shippingContact
+            ),
             'customer' => $customer,
             'sourceOfFunds' => array(
                 'type' => 'CARD'

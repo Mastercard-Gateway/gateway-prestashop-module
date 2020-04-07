@@ -1042,7 +1042,8 @@ class Mastercard extends PaymentModule
      */
     public function getHostedCheckoutJsComponent()
     {
-        return 'https://'. $this->getApiEndpoint() . '/checkout/version/' . $this->getApiVersion() . '/checkout.js';
+        $cacheBust = (int) round(microtime(true));
+        return 'https://'. $this->getApiEndpoint() . '/checkout/version/' . $this->getApiVersion() . '/checkout.js?_=' . $cacheBust;
     }
 
     /**
@@ -1052,7 +1053,8 @@ class Mastercard extends PaymentModule
      */
     public function getHostedSessionJsComponent()
     {
-        return 'https://'. $this->getApiEndpoint() . '/form/version/' . $this->getApiVersion() . '/merchant/' . $this->getConfigValue('mpgs_merchant_id') . '/session.js';
+        $cacheBust = (int) round(microtime(true));
+        return 'https://'. $this->getApiEndpoint() . '/form/version/' . $this->getApiVersion() . '/merchant/' . $this->getConfigValue('mpgs_merchant_id') . '/session.js?_=' . $cacheBust;
     }
 
 

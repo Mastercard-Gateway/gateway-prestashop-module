@@ -55,29 +55,28 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
             )
         );
 
-        $address = new Address(Context::getContext()->cart->id_address_invoice);
-        $country = new Country($address->id_country);
-        $billing = array(
-            'address' => array(
-                'city' => GatewayService::safe($address->city, 100),
-                'country' => $this->module->iso2ToIso3($country->iso_code),
-                'postcodeZip' => GatewayService::safe($address->postcode, 10),
-                'street' => GatewayService::safe($address->address1, 100),
-                'street2' => GatewayService::safe($address->address2, 100),
-            )
-        );
+        /** @var ContextCore $context */
+        $context = Context::getContext();
 
-        $customer = array(
-            'email' => GatewayService::safe(Context::getContext()->customer->email),
-            'firstName' => GatewayService::safe(Context::getContext()->customer->firstname, 50),
-            'lastName' => GatewayService::safe(Context::getContext()->customer->lastname, 50),
-        );
+        /** @var CartCore $cart */
+        $cart = $context->cart;
+
+        /** @var AddressCore $billingAddress */
+        $billingAddress = new Address($cart->id_address_invoice);
+
+        /** @var AddressCore $shippingAddress */
+        $shippingAddress = new Address($cart->id_address_delivery);
+
+        /** @var CustomerCore $customer */
+        $customer = Context::getContext()->customer;
 
         $response = $this->client->createCheckoutSession(
             $order,
             $interaction,
-            $customer,
-            $billing
+            $this->getContactForGateway($customer),
+            $this->getAddressForGateway($billingAddress),
+            $this->getAddressForGateway($shippingAddress),
+            $this->getContactForGateway($shippingAddress)
         );
 
         $responseData = array(

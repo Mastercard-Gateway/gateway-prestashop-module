@@ -169,4 +169,38 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
         }
         return false;
     }
+
+    /**
+     * @param AddressCore $address
+     * @return array
+     */
+    public function getAddressForGateway($address)
+    {
+        /** @var CountryCore $country */
+        $country = new Country($address->id_country);
+
+        return array(
+            'city' => GatewayService::safe($address->city, 100),
+            'country' => $this->module->iso2ToIso3($country->iso_code),
+            'postcodeZip' => GatewayService::safe($address->postcode, 10),
+            'street' => GatewayService::safe($address->address1, 100),
+            'street2' => GatewayService::safe($address->address2, 100),
+            'company' => GatewayService::safe($address->company, 100)
+        );
+    }
+
+    /**
+     * @param CustomerCore|AddressCore $customer
+     * @return array
+     */
+    public function getContactForGateway($customer)
+    {
+        return array(
+            'firstName' => GatewayService::safe($customer->firstname, 50),
+            'lastName' => GatewayService::safe($customer->lastname, 50),
+            'email' => GatewayService::safeProperty($customer, 'email'),
+            'mobilePhone' => GatewayService::safeProperty($customer, 'phone_mobile'),
+            'phone' => GatewayService::safeProperty($customer, 'phone'),
+        );
+    }
 }
