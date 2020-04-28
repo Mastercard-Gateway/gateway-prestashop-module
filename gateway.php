@@ -373,7 +373,7 @@ class GatewayService
      */
     public function check3dsEnrollment($data, $order, $session)
     {
-        $threeDSecureId = uniqid(sprintf('3DS-'));
+        $threeDSecureId = uniqid('3DS-', true);
         $uri = $this->apiUrl . '3DSecureId/' . $threeDSecureId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
