@@ -1,4 +1,20 @@
 <?php
+/**
+ * Copyright (c) 2019-2020 Mastercard
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 
 global $_MODULE;
 $_MODULE = array();
@@ -25,7 +41,6 @@ $_MODULE['<{mastercard}prestashop>mastercard_00d23a76e43b46dae9ec7aa9dcbebb32'] 
 $_MODULE['<{mastercard}prestashop>mastercard_b9f5c797ebbf55adccdd8539a65a0241'] = 'Desactivado';
 $_MODULE['<{mastercard}prestashop>mastercard_b78a3223503896721cca1303f776159b'] = 'Titulo';
 $_MODULE['<{mastercard}prestashop>mastercard_d721757161f7f70c5b0949fdb6ec2c30'] = 'Apariencia';
-$_MODULE['<{mastercard}prestashop>mastercard_851bd83a102d143ee17d97f9e15e15af'] = 'Google Analytics Tracking ID';
 $_MODULE['<{mastercard}prestashop>mastercard_b2982cccbf009977e72aa6e4796f8fed'] = 'Mostrar Direccion de Facturacion';
 $_MODULE['<{mastercard}prestashop>mastercard_62a5e490880a92eef74f167d9dc6dca0'] = 'Ocultar';
 $_MODULE['<{mastercard}prestashop>mastercard_e89ab59baea830bd940c300886c50efe'] = 'Obligatorio';

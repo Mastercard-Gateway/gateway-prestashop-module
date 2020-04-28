@@ -1,6 +1,19 @@
 <?php
 /**
- * Copyright (c) On Tap Networks Limited.
+ * Copyright (c) 2019-2020 Mastercard
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 use Http\Discovery\HttpClientDiscovery;
@@ -242,6 +255,20 @@ class GatewayService
     }
 
     /**
+     * @param string $class
+     * @param string $property
+     * @param int $limited
+     * @return bool|string|null
+     */
+    public static function safeProperty($class, $property, $limited = 0)
+    {
+        if (!property_exists($class, $property)) {
+            return null;
+        }
+        return static::safe($class->{$property}, $limited);
+    }
+
+    /**
      * @param mixed $value
      * @return string
      */
@@ -346,7 +373,7 @@ class GatewayService
      */
     public function check3dsEnrollment($data, $order, $session)
     {
-        $threeDSecureId = uniqid(sprintf('3DS-'));
+        $threeDSecureId = uniqid('3DS-', true);
         $uri = $this->apiUrl . '3DSecureId/' . $threeDSecureId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
@@ -373,6 +400,8 @@ class GatewayService
      * @param array $interaction
      * @param array $customer
      * @param array $billing
+     * @param array $shipping
+     * @param array $shippingContact
      * @return array
      * @throws Exception
      * @throws GatewayResponseException
@@ -381,7 +410,9 @@ class GatewayService
         $order = array(),
         $interaction = array(),
         $customer = array(),
-        $billing = array()
+        $billing = array(),
+        $shipping = array(),
+        $shippingContact = array()
     ) {
         $uri = $this->apiUrl . 'session';
 
@@ -391,7 +422,13 @@ class GatewayService
             'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
             )),
-            'billing' => $billing,
+            'billing' => array(
+                'address' => $billing
+            ),
+            'shipping' => array(
+                'address' => $shipping,
+                'contact' => $shippingContact
+            ),
             'interaction' => $interaction,
             'customer' => $customer,
         )));
@@ -416,6 +453,8 @@ class GatewayService
      * @param array $session
      * @param array $customer
      * @param array $billing
+     * @param array $shipping
+     * @param array $shippingContact
      * @return mixed|ResponseInterface
      * @throws Exception
      */
@@ -425,7 +464,9 @@ class GatewayService
         $theeDSecure = null,
         $session = array(),
         $customer = array(),
-        $billing = array()
+        $billing = array(),
+        $shipping = array(),
+        $shippingContact = array()
     ) {
         $txnId = '1';
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
@@ -437,7 +478,13 @@ class GatewayService
             'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
             )),
-            'billing' => $billing,
+            'billing' => array(
+                'address' => $billing
+            ),
+            'shipping' => array(
+                'address' => $shipping,
+                'contact' => $shippingContact,
+            ),
             'customer' => $customer,
             'sourceOfFunds' => array(
                 'type' => 'CARD'
@@ -468,6 +515,8 @@ class GatewayService
      * @param array $session
      * @param array $customer
      * @param array $billing
+     * @param array $shipping
+     * @param array $shippingContact
      * @return mixed|ResponseInterface
      * @throws Exception
      */
@@ -477,7 +526,9 @@ class GatewayService
         $theeDSecure = null,
         $session = array(),
         $customer = array(),
-        $billing = array()
+        $billing = array(),
+        $shipping = array(),
+        $shippingContact = array()
     ) {
         $txnId = '1';
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
@@ -489,7 +540,13 @@ class GatewayService
             'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
             )),
-            'billing' => $billing,
+            'billing' => array(
+                'address' => $billing
+            ),
+            'shipping' => array(
+                'address' => $shipping,
+                'contact' => $shippingContact
+            ),
             'customer' => $customer,
             'sourceOfFunds' => array(
                 'type' => 'CARD'

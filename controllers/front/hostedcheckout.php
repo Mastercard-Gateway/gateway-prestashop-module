@@ -1,6 +1,19 @@
 <?php
 /**
- * Copyright (c) On Tap Networks Limited.
+ * Copyright (c) 2019-2020 Mastercard
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 require_once dirname(__FILE__) . '/abstract.php';
@@ -37,37 +50,33 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
                 'customerEmail' => GatewayService::safe(Configuration::get('mpgs_hc_show_email')),
                 'orderSummary' => GatewayService::safe(Configuration::get('mpgs_hc_show_summary')),
             ),
-            'googleAnalytics' => array(
-                'propertyId' => Configuration::get('mpgs_hc_ga_tracking_id')?:null,
-            ),
             'merchant' => array(
                 'name' => GatewayService::safe(Context::getContext()->shop->name, 40),
             )
         );
 
-        $address = new Address(Context::getContext()->cart->id_address_invoice);
-        $country = new Country($address->id_country);
-        $billing = array(
-            'address' => array(
-                'city' => GatewayService::safe($address->city, 100),
-                'country' => $this->module->iso2ToIso3($country->iso_code),
-                'postcodeZip' => GatewayService::safe($address->postcode, 10),
-                'street' => GatewayService::safe($address->address1, 100),
-                'street2' => GatewayService::safe($address->address2, 100),
-            )
-        );
+        /** @var ContextCore $context */
+        $context = Context::getContext();
 
-        $customer = array(
-            'email' => GatewayService::safe(Context::getContext()->customer->email),
-            'firstName' => GatewayService::safe(Context::getContext()->customer->firstname, 50),
-            'lastName' => GatewayService::safe(Context::getContext()->customer->lastname, 50),
-        );
+        /** @var CartCore $cart */
+        $cart = $context->cart;
+
+        /** @var AddressCore $billingAddress */
+        $billingAddress = new Address($cart->id_address_invoice);
+
+        /** @var AddressCore $shippingAddress */
+        $shippingAddress = new Address($cart->id_address_delivery);
+
+        /** @var CustomerCore $customer */
+        $customer = Context::getContext()->customer;
 
         $response = $this->client->createCheckoutSession(
             $order,
             $interaction,
-            $customer,
-            $billing
+            $this->getContactForGateway($customer),
+            $this->getAddressForGateway($billingAddress),
+            $this->getAddressForGateway($shippingAddress),
+            $this->getContactForGateway($shippingAddress)
         );
 
         $responseData = array(

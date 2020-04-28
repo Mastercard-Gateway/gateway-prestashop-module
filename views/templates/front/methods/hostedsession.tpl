@@ -139,6 +139,16 @@
             return;
         }
 
+        if (typeof PaymentSession === "undefined") {
+            loadPaymentSession();
+            return;
+        }
+
+        if (document.getElementById('card-number') === null) {
+            loadPaymentSession();
+            return;
+        }
+
         hsLoading = true;
 
         PaymentSession.configure({

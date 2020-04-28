@@ -1,6 +1,19 @@
 <?php
 /**
- * Copyright (c) On Tap Networks Limited.
+ * Copyright (c) 2019-2020 Mastercard
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
  */
 
 use PrestaShop\PrestaShop\Core\Payment\PaymentOption;
@@ -51,7 +64,7 @@ class Mastercard extends PaymentModule
         $this->name = 'mastercard';
         $this->tab = 'payments_gateways';
 
-        $this->version = '1.0.0';
+        $this->version = '1.1.0';
         if (!defined('MPGS_VERSION')) {
             define('MPGS_VERSION', $this->version);
         }
@@ -430,7 +443,6 @@ class Mastercard extends PaymentModule
             'mpgs_hc_show_billing' => Tools::getValue('mpgs_hc_show_billing', Configuration::get('mpgs_hc_show_billing') ? : 'HIDE'),
             'mpgs_hc_show_email' => Tools::getValue('mpgs_hc_show_email', Configuration::get('mpgs_hc_show_email') ? : 'HIDE'),
             'mpgs_hc_show_summary' => Tools::getValue('mpgs_hc_show_summary', Configuration::get('mpgs_hc_show_summary') ? : 'HIDE'),
-            'mpgs_hc_ga_tracking_id' => Tools::getValue('mpgs_hc_ga_tracking_id', Configuration::get('mpgs_hc_ga_tracking_id')),
 
             'mpgs_hs_active' => Tools::getValue('mpgs_hs_active', Configuration::get('mpgs_hs_active')),
             'mpgs_hs_title' => $hsTitle,
@@ -447,11 +459,11 @@ class Mastercard extends PaymentModule
 
             'mpgs_merchant_id' => Tools::getValue('mpgs_merchant_id', Configuration::get('mpgs_merchant_id')),
             'mpgs_api_password' => Tools::getValue('mpgs_api_password', Configuration::get('mpgs_api_password')),
-            'mpgs_webhook_secret' => Tools::getValue('mpgs_webhook_secret', Configuration::get('mpgs_webhook_secret')),
+            'mpgs_webhook_secret' => Tools::getValue('mpgs_webhook_secret', Configuration::get('mpgs_webhook_secret') ? : null),
 
             'test_mpgs_merchant_id' => Tools::getValue('test_mpgs_merchant_id', Configuration::get('test_mpgs_merchant_id')),
             'test_mpgs_api_password' => Tools::getValue('test_mpgs_api_password', Configuration::get('test_mpgs_api_password')),
-            'test_mpgs_webhook_secret' => Tools::getValue('test_mpgs_webhook_secret', Configuration::get('test_mpgs_webhook_secret')),
+            'test_mpgs_webhook_secret' => Tools::getValue('test_mpgs_webhook_secret', Configuration::get('test_mpgs_webhook_secret') ? : null),
         );
     }
 
@@ -497,12 +509,6 @@ class Mastercard extends PaymentModule
                         'type' => 'text',
                         'label' => $this->l('Theme'),
                         'name' => 'mpgs_hc_theme',
-                        'required' => false
-                    ),
-                    array(
-                        'type' => 'text',
-                        'label' => $this->l('Google Analytics Tracking ID'),
-                        'name' => 'mpgs_hc_ga_tracking_id',
                         'required' => false
                     ),
 //                    array(
@@ -1036,7 +1042,8 @@ class Mastercard extends PaymentModule
      */
     public function getHostedCheckoutJsComponent()
     {
-        return 'https://'. $this->getApiEndpoint() . '/checkout/version/' . $this->getApiVersion() . '/checkout.js';
+        $cacheBust = (int) round(microtime(true));
+        return 'https://'. $this->getApiEndpoint() . '/checkout/version/' . $this->getApiVersion() . '/checkout.js?_=' . $cacheBust;
     }
 
     /**
@@ -1046,7 +1053,8 @@ class Mastercard extends PaymentModule
      */
     public function getHostedSessionJsComponent()
     {
-        return 'https://'. $this->getApiEndpoint() . '/form/version/' . $this->getApiVersion() . '/merchant/' . $this->getConfigValue('mpgs_merchant_id') . '/session.js';
+        $cacheBust = (int) round(microtime(true));
+        return 'https://'. $this->getApiEndpoint() . '/form/version/' . $this->getApiVersion() . '/merchant/' . $this->getConfigValue('mpgs_merchant_id') . '/session.js?_=' . $cacheBust;
     }
 
 
