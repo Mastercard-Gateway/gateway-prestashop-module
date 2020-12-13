@@ -423,6 +423,8 @@ class OrderPaymentResponseHandler extends ResponseHandler
                 $handler
                     ->setProcessor($this->processor)
                     ->handle($order, $txn);
+            } else if ($txn['transaction']['type'] == 'AUTHENTICATION') {
+                continue;
             } else {
                 throw new MasterCardPaymentException('Unknown transaction type ' . $txn['transaction']['type']);
             }

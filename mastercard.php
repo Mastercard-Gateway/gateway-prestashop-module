@@ -34,10 +34,12 @@ require_once(dirname(__FILE__) . '/handlers.php');
 class Mastercard extends PaymentModule
 {
     const PAYMENT_CODE = 'MPGS';
-    const MPGS_API_VERSION = '50';
+    const MPGS_API_VERSION = '58';
 
     const PAYMENT_ACTION_PAY = 'PAY';
     const PAYMENT_ACTION_AUTHCAPTURE = 'AUTHCAPTURE';
+    const PAYMENT_CHECKOUT_SESSION_PURCHASE = 'PURCHASE';
+    const PAYMENT_CHECKOUT_SESSION_AUTHORIZE = 'AUTHORIZE';
 
     /**
      * @var string
@@ -439,6 +441,7 @@ class Mastercard extends PaymentModule
         return array(
             'mpgs_hc_active' => Tools::getValue('mpgs_hc_active', Configuration::get('mpgs_hc_active')),
             'mpgs_hc_title' => $hcTitle,
+            'mpgs_hc_payment_action' => Tools::getValue('mpgs_hc_payment_action', Configuration::get('mpgs_hc_payment_action')),
             'mpgs_hc_theme' => Tools::getValue('mpgs_hc_theme', Configuration::get('mpgs_hc_theme')),
             'mpgs_hc_show_billing' => Tools::getValue('mpgs_hc_show_billing', Configuration::get('mpgs_hc_show_billing') ? : 'HIDE'),
             'mpgs_hc_show_email' => Tools::getValue('mpgs_hc_show_email', Configuration::get('mpgs_hc_show_email') ? : 'HIDE'),
@@ -539,6 +542,19 @@ class Mastercard extends PaymentModule
 //                            'name' => 'name',
 //                        ),
 //                    ),
+                    array(
+                        'type' => 'select',
+                        'label' => $this->l('Payment Model'),
+                        'name' => 'mpgs_hc_payment_action',
+                        'options' => array(
+                            'query' => array(
+                                array('id' => self::PAYMENT_CHECKOUT_SESSION_PURCHASE, 'name' => $this->l('Purchase (Pay)')),
+                                array('id' => self::PAYMENT_CHECKOUT_SESSION_AUTHORIZE, 'name' => $this->l('Authorize & Capture')),
+                            ),
+                            'id' => 'id',
+                            'name' => 'name',
+                        ),
+                    ),
                     array(
                         'type' => 'select',
                         'label' => $this->l('Order Summary display'),

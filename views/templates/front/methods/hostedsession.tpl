@@ -8,10 +8,10 @@
     <div class="form-group row">
         <label class="col-md-3 form-control-label" for="expiry-month">{l s='Expiry:' mod='mastercard'}</label>
         <div class="col-md-3">
-            <input class="form-control" aria-label="{l s='Expiry Month:' mod='mastercard'}" type="text" maxlength="2" id="expiry-month" value="" />
+            <input class="form-control" aria-label="{l s='Expiry Month:' mod='mastercard'}" type="text" maxlength="2" id="expiry-month" value="" readonly="readonly" />
         </div>
         <div class="col-md-3">
-            <input class="form-control" aria-label="{l s='Expiry Year:' mod='mastercard'}" type="text" maxlength="2" id="expiry-year" value="" />
+            <input class="form-control" aria-label="{l s='Expiry Year:' mod='mastercard'}" type="text" maxlength="2" id="expiry-year" value="" readonly="readonly" />
         </div>
     </div>
     <div class="form-group row">

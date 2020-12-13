@@ -449,7 +449,7 @@ class GatewayService
      *
      * @param string $orderId
      * @param array $order
-     * @param array $theeDSecure
+     * @param string $theeDSecureId
      * @param array $session
      * @param array $customer
      * @param array $billing
@@ -461,7 +461,7 @@ class GatewayService
     public function authorize(
         $orderId,
         $order,
-        $theeDSecure = null,
+        $theeDSecureId = null,
         $session = array(),
         $customer = array(),
         $billing = array(),
@@ -473,7 +473,7 @@ class GatewayService
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
             'apiOperation' => 'AUTHORIZE',
-            '3DSecure' => $theeDSecure,
+            '3DSecureId' => $theeDSecureId,
             'partnerSolutionId' => $this->getSolutionId(),
             'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
@@ -511,7 +511,7 @@ class GatewayService
      *
      * @param string $orderId
      * @param array $order
-     * @param array $theeDSecure
+     * @param string $theeDSecureId
      * @param array $session
      * @param array $customer
      * @param array $billing
@@ -523,7 +523,7 @@ class GatewayService
     public function pay(
         $orderId,
         $order = array(),
-        $theeDSecure = null,
+        $theeDSecureId = null,
         $session = array(),
         $customer = array(),
         $billing = array(),
@@ -535,7 +535,7 @@ class GatewayService
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
             'apiOperation' => 'PAY',
-            '3DSecure' => $theeDSecure,
+            '3DSecureId' => $theeDSecureId,
             'partnerSolutionId' => $this->getSolutionId(),
             'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl

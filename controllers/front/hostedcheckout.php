@@ -52,7 +52,8 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
             ),
             'merchant' => array(
                 'name' => GatewayService::safe(Context::getContext()->shop->name, 40),
-            )
+            ),
+            'operation' => Configuration::get('mpgs_hc_payment_action')
         );
 
         /** @var ContextCore $context */

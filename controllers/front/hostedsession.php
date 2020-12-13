@@ -115,7 +115,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             $response = $this->client->authorize(
                 $this->module->getNewOrderRef(),
                 $orderData,
-                $this->threeDSecureData ? : null,
+                $this->threeDSecureId,
                 $session,
                 $this->getContactForGateway($customer),
                 $this->getAddressForGateway($billingAddress),
@@ -134,7 +134,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             $response = $this->client->pay(
                 $this->module->getNewOrderRef(),
                 $orderData,
-                $this->threeDSecureData ? : null,
+                $this->threeDSecureId,
                 $session,
                 $this->getContactForGateway($customer),
                 $this->getAddressForGateway($billingAddress),

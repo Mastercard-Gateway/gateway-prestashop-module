@@ -34,6 +34,11 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
     public $threeDSecureData;
 
     /**
+     * @var string
+     */
+    public $threeDSecureId;
+
+    /**
      * @throws PrestaShopException
      * @throws Exception
      */
@@ -78,9 +83,9 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
         if (Tools::getValue('process_acs_result') === "1") {
             $paRes = Tools::getValue('PaRes');
-            $threeDSecureId = Tools::getValue('3DSecureId');
+            $this->threeDSecureId = Tools::getValue('3DSecureId');
 
-            if (!$paRes || !$threeDSecureId) {
+            if (!$paRes || !$this->threeDSecureId) {
                 $this->errors[] = $this->module->l('Payment error occurred (3D Secure).', 'abstract');
                 $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
                     'action' => 'show'
@@ -88,7 +93,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
                 exit;
             }
 
-            $response = $this->client->process3dsResult($threeDSecureId, $paRes);
+            $response = $this->client->process3dsResult($this->threeDSecureId, $paRes);
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
                 $this->errors[] = $this->module->l('Your payment was declined by 3D Secure.', 'abstract');
