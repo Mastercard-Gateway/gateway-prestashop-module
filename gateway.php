@@ -278,6 +278,37 @@ class GatewayService
     }
 
     /**
+     * @param array $data
+     * @throws GatewayResponseException
+     */
+    public function validateInitiateAuthenticationResponse($data)
+    {
+        if (!isset($data['result']) || $data['result'] !== 'SUCCESS') {
+            throw new GatewayResponseException('Missing or invalid session result.');
+        }
+
+        if (!isset($data['transaction']['id'])) {
+            throw new GatewayResponseException('Missing session or ID.');
+        }
+    }
+
+    /**
+     * @param array $data
+     * @throws GatewayResponseException
+     */
+    public function validateAuthenticatePayerResponse($data)
+    {
+        $result = isset($data['result']) ? $data['result'] : '';
+        if ($result !== 'SUCCESS' && $result !== 'PROCEED' && $result !== 'PENDING') {
+            throw new GatewayResponseException('Missing or invalid session result.');
+        }
+
+        if (!isset($data['transaction']['id'])) {
+            throw new GatewayResponseException('Missing session or ID.');
+        }
+    }
+
+    /**
      * @param $data
      * @throws GatewayResponseException
      */
@@ -337,7 +368,7 @@ class GatewayService
      * or otherwise of the authentication.
      * The 3DS AuthId is required so that merchants can submit payloads multiple times
      * without producing duplicates in the database.
-     * POST https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/3DSecureId/{3DSecureId}
+     * POST https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/3DSecureId/{3DSecureId}
      *
      * @param string $threeDSecureId
      * @param string $paRes
@@ -363,7 +394,7 @@ class GatewayService
 
     /**
      * Request to check a cardholder's enrollment in the 3DSecure scheme.
-     * PUT https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/3DSecureId/{3DSecureId}
+     * PUT https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/3DSecureId/{3DSecureId}
      *
      * @param array $data
      * @param array $order
@@ -390,11 +421,103 @@ class GatewayService
     }
 
     /**
+     * Create initiate authentication
+     *
+     * @see https://test-gateway.mastercard.com/api/documentation/apiDocumentation/rest-json/version/latest/operation/Authentication%3a%20%20Initiate%20Authentication.html?locale=en_US
+     * @param string $orderId
+     * @param array $session
+     * @param array $order
+     */
+    public function initiateAuthentication(
+        $orderId,
+        $session,
+        $order
+    ) {
+        $txnId = uniqid($orderId . '-', true);
+        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
+
+        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
+            'apiOperation' => 'INITIATE_AUTHENTICATION',
+            'authentication' => [
+                'acceptVersions' => '3DS1,3DS2',
+                'channel' => 'PAYER_BROWSER',
+                'purpose' => 'PAYMENT_TRANSACTION'
+            ],
+            'session' => $session,
+            'order' => $order
+        )));
+
+        $response = $this->client->sendRequest($request);
+        $response = json_decode($response->getBody(), true);
+
+        $this->validateInitiateAuthenticationResponse($response);
+
+        return $response;
+
+    }
+
+    /**
+     * Authenticate Payer
+     *
+     * @see https://test-gateway.mastercard.com/api/documentation/apiDocumentation/rest-json/version/latest/operation/Authentication%3a%20%20Initiate%20Authentication.html?locale=en_US
+     * @param string $orderId
+     * @param array $session
+     * @param array $order
+     * @param array $device
+     * @param string $txnId
+     * @param string $responseUrl
+     * @param array $customer
+     * @param array $billing
+     * @param array $shipping
+     * @param array $shippingContact
+     */
+    public function authenticatePayer(
+        $orderId,
+        $session,
+        $order,
+        $device,
+        $txnId,
+        $responseUrl,
+        $customer = array(),
+        $billing = array(),
+        $shipping = array(),
+        $shippingContact = array()
+    ) {
+        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
+
+        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
+            'apiOperation' => 'AUTHENTICATE_PAYER',
+            'authentication' => [
+                'redirectResponseUrl' => $responseUrl
+            ],
+            'device' => $device,
+            'session' => $session,
+            'order' => $order,
+            'billing' => array(
+                'address' => $billing
+            ),
+            'shipping' => array(
+                'address' => $shipping,
+                'contact' => $shippingContact,
+            ),
+            'customer' => $customer,
+        )));
+
+        $response = $this->client->sendRequest($request);
+        $response = json_decode($response->getBody(), true);
+
+        $this->validateAuthenticatePayerResponse($response);
+
+        return $response;
+
+    }
+
+    /**
      * Create Checkout Session
      * Request to create a session identifier for the checkout interaction.
      * The session identifier, when included in the Checkout.configure() function,
      * allows you to return the payer to the merchant's website after completing the payment attempt.
-     * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/session
+     * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/session
      *
      * @param array $order
      * @param array $interaction
@@ -565,7 +688,7 @@ class GatewayService
     /**
      * Retrieve order
      * Request to retrieve the details of an order and all transactions associated with this order.
-     * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}
+     * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/order/{orderid}
      *
      * @param string $orderId
      * @return array
@@ -635,7 +758,7 @@ class GatewayService
 
     /**
      * Request to retrieve the details of a transaction. For example you can retrieve the details of an authorization that you previously executed.
-     * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
+     * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
      * @param string $orderId
      * @param string $txnId
@@ -659,7 +782,7 @@ class GatewayService
     /**
      * Request to void a previous transaction. A void will reverse a previous transaction.
      * Typically voids will only be successful when processed not long after the original transaction.
-     * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
+     * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
      * @param string $orderId
      * @param string $txnId
@@ -694,7 +817,7 @@ class GatewayService
      * a new transactionId, and the amount you wish to capture.
      * You may provide other fields (such as shipping address) if you want to update their values; however,
      * you must NOT provide sourceOfFunds.
-     * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
+     * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
      * @param string $orderId
      * @param string $txnId
@@ -735,7 +858,7 @@ class GatewayService
      * however, you must NOT provide sourceOfFunds.
      * In rare situations, you may want to refund the payer without associating the credit to a previous transaction (see Standalone Refund).
      * In this case, you need to provide the sourceOfFunds and a new orderId.
-     * https://mtf.gateway.mastercard.com/api/rest/version/50/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
+     * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
      * @param $orderId
      * @param $txnId
@@ -771,7 +894,7 @@ class GatewayService
 
     /**
      * Request to retrieve the options available for processing a payment, for example, the credit cards and currencies.
-     * https://mtf.gateway.mastercard.com/api/rest/version/51/merchant/{merchantId}/paymentOptionsInquiry
+     * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/paymentOptionsInquiry
      */
     public function paymentOptionsInquiry()
     {

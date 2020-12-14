@@ -22,6 +22,8 @@
     </div>
 </section>
 
+<div id="redirect_html" style="display: none"></div>
+
 <div id="hostedsession_errors" style="color: red; display: none;" class="errors"></div>
 
 <script async src="{$hostedsession_component_url}"></script>
@@ -97,6 +99,55 @@
             if (is3DsEnabled()) {
                 document.querySelector('form.mpgs_hostedsession > input[name=check_3ds_enrollment]').value = '1';
             }
+            if (is3Ds2Enabled()) {
+                document.querySelector('form.mpgs_hostedsession > input[name=check_3ds_enrollment]').value = '2';
+                console.log("{$hostedsession_action_url}");
+
+                $.post("{$hostedsession_action_url}", {
+                    check_3ds_enrollment: "2",
+                    action_type: "init",
+                    session_id: response.session.id,
+                    session_version: response.session.version
+                }, function (authInitResString) {
+                    var authInitRes = JSON.parse(authInitResString);
+                    if (!authInitRes.success) {
+                        $('#hostedsession_errors').text(authInitRes.error);
+                        document.querySelector('#payment-confirmation button').disabled = false;
+                        return;
+                    }
+
+                    $('#redirect_html').html(authInitRes.redirectHtml);
+                    eval($('#initiate-authentication-script').text());
+
+                    $.post("{$hostedsession_action_url}", {
+                        check_3ds_enrollment: "2",
+                        action_type: "authenticate",
+                        session_id: response.session.id,
+                        session_version: response.session.version,
+                        transaction_id: authInitRes.transaction_id,
+                        browserDetails: {
+                            javaEnabled: navigator.javaEnabled(),
+                            language: navigator.language,
+                            screenHeight: window.screen.height,
+                            screenWidth: window.screen.width,
+                            timeZone: new Date().getTimezoneOffset(),
+                            colorDepth: screen.colorDepth,
+                            acceptHeaders: 'application/json',
+                            '3DSecureChallengeWindowSize': 'FULL_SCREEN'
+                        }
+                    }, function (authPayerResString) {
+                        var authPayerRes = JSON.parse(authPayerResString);
+                        if (!authPayerRes.success) {
+                            $('#hostedsession_errors').text(authPayerRes.error);
+                            document.querySelector('#payment-confirmation button').disabled = false;
+                            return;
+                        }
+                        // TODO handle auth request
+                        document.querySelector('#payment-confirmation button').disabled = false;
+                    });
+                });
+                return;
+            }
             placeOrder(response);
         } else {
             errorsContainer.innerText = hsLoadingFailedMsg + ' (unexpected status: '+response.status+')';
@@ -112,10 +163,18 @@
     }
 
     function is3DsEnabled() {
-        {if $hostedsession_3ds}
+        {if $hostedsession_3ds == 1}
             return true;
         {else}
             return false;
+        {/if}
+    }
+
+    function is3Ds2Enabled() {
+        {if $hostedsession_3ds == 2}
+        return true;
+        {else}
+        return false;
         {/if}
     }
 

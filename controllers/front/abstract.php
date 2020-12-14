@@ -114,6 +114,107 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             return false;
         }
 
+        if (Tools::getValue('check_3ds_enrollment') === "2") {
+
+            if (Tools::getValue('action_type') === "init") {
+                $currency = Context::getContext()->currency;
+                $order = array(
+                    'currency' => $currency->iso_code,
+                );
+
+                $session = array(
+                    'id' => Tools::getValue('session_id')
+                );
+
+                $response = $this->client->initiateAuthentication(
+                    $this->module->getNewOrderRef(),
+                    $session,
+                    $order
+                );
+
+                if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
+                    echo json_encode([
+                        'success' => false,
+                        'error' => $this->module->l('Your payment was declined.', 'abstract')
+                    ]);
+                    exit;
+                }
+
+                $res = [
+                    'success' => true,
+                    'transaction_id' => $response['transaction']['id'],
+                    'redirectHtml' => $response['authentication']['redirectHtml'],
+                ];
+                echo json_encode($res);
+                exit;
+            }
+
+            if (Tools::getValue('action_type') === "authenticate") {
+                $currency = Context::getContext()->currency;
+                $order = array(
+                    'currency' => $currency->iso_code,
+                    'amount' => Context::getContext()->cart->getOrderTotal()
+                );
+
+                $session = array(
+                    'id' => Tools::getValue('session_id')
+                );
+
+                $device = array(
+                    'browserDetails' => Tools::getValue('browserDetails'),
+                    'ipAddress' => $_SERVER['REMOTE_ADDR']
+                );
+
+                $txnId = Tools::getValue('transaction_id');
+
+                /** @var ContextCore $context */
+                $context = Context::getContext();
+
+                /** @var CartCore $cart */
+                $cart = $context->cart;
+
+                /** @var AddressCore $billingAddress */
+                $billingAddress = new Address($cart->id_address_invoice);
+
+                /** @var AddressCore $shippingAddress */
+                $shippingAddress = new Address($cart->id_address_delivery);
+
+                /** @var CustomerCore $customer */
+                $customer = Context::getContext()->customer;
+
+                $responseUrl = Context::getContext()->link->getModuleLink('mastercard', 'hostedsession');
+
+                $response = $this->client->authenticatePayer(
+                    $this->module->getNewOrderRef(),
+                    $session,
+                    $order,
+                    $device,
+                    $txnId,
+                    $responseUrl,
+                    $this->getContactForGateway($customer),
+                    $this->getAddressForGateway($billingAddress),
+                    $this->getAddressForGateway($shippingAddress),
+                    $this->getContactForGateway($shippingAddress)
+                );
+
+                if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
+                    echo json_encode([
+                        'success' => false,
+                        'error' => $this->module->l('Your payment was declined.', 'abstract')
+                    ]);
+                    exit;
+                }
+
+                $res = [
+                    'success' => true,
+                    'transaction_id' => $response['transaction']['id'],
+                    'redirectHtml' => $response['authentication']['redirectHtml'],
+                ];
+                echo json_encode($res);
+                exit;
+            }
+        }
+
         if (Tools::getValue('check_3ds_enrollment') === "1") {
             $threeD = array(
                 'authenticationRedirect' => array(
