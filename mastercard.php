@@ -629,22 +629,17 @@ class Mastercard extends PaymentModule
                         ),
                     ),
                     array(
-                        'type' => 'switch',
+                        'type' => 'select',
                         'label' => $this->l('3D Secure'),
                         'name' => 'mpgs_hs_3ds',
-                        'is_bool' => true,
-                        'desc' => '',
-                        'values' => array(
-                            array(
-                                'id' => 'active_off',
-                                'value' => true,
-                                'label' => $this->l('Disabled'),
+                        'options' => array(
+                            'query' => array(
+                                array('value' => '', 'name' => $this->l('Disabled')),
+                                array('value' => '1', 'name' => $this->l('3DS')),
+                                array('value' => '2', 'name' => $this->l('EMV 3DS (3DS2)')),
                             ),
-                            array(
-                                'id' => 'active_on',
-                                'value' => false,
-                                'label' => $this->l('Enabled'),
-                            ),
+                            'id' => 'value',
+                            'name' => 'name',
                         ),
                     ),
                 ),
