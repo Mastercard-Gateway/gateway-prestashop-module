@@ -572,31 +572,34 @@ class GatewayService
      *
      * @param string $orderId
      * @param array $order
-     * @param string $theeDSecureId
+     * @param string $threeDSecureId
      * @param array $session
      * @param array $customer
      * @param array $billing
      * @param array $shipping
      * @param array $shippingContact
+     * @param array $authentication
+     * @param string $threeDSVersion
      * @return mixed|ResponseInterface
      * @throws Exception
      */
     public function authorize(
         $orderId,
         $order,
-        $theeDSecureId = null,
+        $threeDSecureId = null,
         $session = array(),
         $customer = array(),
         $billing = array(),
         $shipping = array(),
-        $shippingContact = array()
+        $shippingContact = array(),
+        $authentication = array(),
+        $threeDSVersion = '1'
     ) {
         $txnId = '1';
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
 
-        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
+        $body = array(
             'apiOperation' => 'AUTHORIZE',
-            '3DSecureId' => $theeDSecureId,
             'partnerSolutionId' => $this->getSolutionId(),
             'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
@@ -613,7 +616,15 @@ class GatewayService
                 'type' => 'CARD'
             ),
             'session' => $session,
-        )));
+        );
+
+        if ($threeDSVersion == 1) {
+            $body['3DSecureId'] = $threeDSecureId;
+        } else if ($threeDSVersion == 2) {
+            $body['authentication'] = $authentication;
+        }
+
+        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode($body));
 
         $response = $this->client->sendRequest($request);
         $response = json_decode($response->getBody(), true);
@@ -634,31 +645,34 @@ class GatewayService
      *
      * @param string $orderId
      * @param array $order
-     * @param string $theeDSecureId
+     * @param string $threeDSecureId
      * @param array $session
      * @param array $customer
      * @param array $billing
      * @param array $shipping
      * @param array $shippingContact
+     * @param array $authentication
+     * @param string $threeDSVersion
      * @return mixed|ResponseInterface
      * @throws Exception
      */
     public function pay(
         $orderId,
         $order = array(),
-        $theeDSecureId = null,
+        $threeDSecureId = null,
         $session = array(),
         $customer = array(),
         $billing = array(),
         $shipping = array(),
-        $shippingContact = array()
+        $shippingContact = array(),
+        $authentication = array(),
+        $threeDSVersion = '1'
     ) {
         $txnId = '1';
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
 
-        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
+        $body = array(
             'apiOperation' => 'PAY',
-            '3DSecureId' => $theeDSecureId,
             'partnerSolutionId' => $this->getSolutionId(),
             'order' => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl
@@ -675,7 +689,15 @@ class GatewayService
                 'type' => 'CARD'
             ),
             'session' => $session,
-        )));
+        );
+
+        if ($threeDSVersion == 1) {
+            $body['3DSecureId'] = $threeDSecureId;
+        } else if ($threeDSVersion == 2) {
+            $body['authentication'] = $authentication;
+        }
+
+        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode($body));
 
         $response = $this->client->sendRequest($request);
         $response = json_decode($response->getBody(), true);

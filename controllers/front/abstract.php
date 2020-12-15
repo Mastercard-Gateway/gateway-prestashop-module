@@ -182,7 +182,11 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
                 /** @var CustomerCore $customer */
                 $customer = Context::getContext()->customer;
 
-                $responseUrl = Context::getContext()->link->getModuleLink('mastercard', 'hostedsession');
+                $responseUrl = Context::getContext()->link->getModuleLink('mastercard', 'hostedsession', [
+                    'session_id' => Tools::getValue('session_id'),
+                    'action_type' => 'completed',
+                    'check_3ds_enrollment' => '2'
+                ]);
 
                 $response = $this->client->authenticatePayer(
                     $this->module->getNewOrderRef(),
@@ -211,6 +215,12 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
                     'redirectHtml' => $response['authentication']['redirectHtml'],
                 ];
                 echo json_encode($res);
+                exit;
+            }
+
+            if (Tools::getValue('action_type') === "completed") {
+                $transactionId = Tools::getValue('transaction_id');
+                echo "<script>window.parent.treeDS2Completed('{$transactionId}')</script>";
                 exit;
             }
         }

@@ -26,6 +26,8 @@
 
 <div id="hostedsession_errors" style="color: red; display: none;" class="errors"></div>
 
+<div id="hostedsession_modal" style="display: none" class="hostedsession_modal"></div>
+
 <script async src="{$hostedsession_component_url}"></script>
 <script>
     if (self !== top) {
@@ -101,7 +103,6 @@
             }
             if (is3Ds2Enabled()) {
                 document.querySelector('form.mpgs_hostedsession > input[name=check_3ds_enrollment]').value = '2';
-                console.log("{$hostedsession_action_url}");
 
                 $.post("{$hostedsession_action_url}", {
                     check_3ds_enrollment: "2",
@@ -136,14 +137,22 @@
                             '3DSecureChallengeWindowSize': 'FULL_SCREEN'
                         }
                     }, function (authPayerResString) {
+                        var $modal = $('#hostedsession_modal');
+                        window.treeDS2Completed = function (transactionId) {
+                            document.querySelector('form.mpgs_hostedsession > input[name=transaction_id]').value = transactionId;
+                            placeOrder(response);
+                            $modal.hide();
+                        }
                         var authPayerRes = JSON.parse(authPayerResString);
                         if (!authPayerRes.success) {
                             $('#hostedsession_errors').text(authPayerRes.error);
                             document.querySelector('#payment-confirmation button').disabled = false;
                             return;
                         }
-                        // TODO handle auth request
-                        document.querySelector('#payment-confirmation button').disabled = false;
+                        $modal.html(authPayerRes.redirectHtml);
+                        eval($('#authenticate-payer-script').text());
+                        // TODO add condition for frictionless action
+                        $modal.show();
                     });
                 });
                 return;
@@ -224,3 +233,25 @@
 
     loadPaymentSession();
 </script>
+
+
+<style>
+    .hostedsession_modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        z-index: 100;
+    }
+
+    .hostedsession_modal [id=threedsFrictionLessRedirect] {
+        height: 100%;
+    }
+
+    .hostedsession_modal [id=challengeFrame] {
+        width: 100%;
+        height: 100%;
+    }
+</style>
