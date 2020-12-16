@@ -151,8 +151,9 @@
                         }
                         $modal.html(authPayerRes.redirectHtml);
                         eval($('#authenticate-payer-script').text());
-                        // TODO add condition for frictionless action
-                        $modal.show();
+                        if (authPayerRes.action === 'challenge') {
+                            $modal.show();
+                        }
                     });
                 });
                 return;

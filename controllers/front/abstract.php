@@ -213,6 +213,10 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
                     'success' => true,
                     'transaction_id' => $response['transaction']['id'],
                     'redirectHtml' => $response['authentication']['redirectHtml'],
+                    'action' => isset($response['authentication']['payerInteraction'])
+                        && $response['authentication']['payerInteraction'] === 'REQUIRED'
+                        ? 'challenge'
+                        : 'frictionless'
                 ];
                 echo json_encode($res);
                 exit;
