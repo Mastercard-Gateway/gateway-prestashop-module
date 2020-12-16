@@ -66,7 +66,7 @@ class Mastercard extends PaymentModule
         $this->name = 'mastercard';
         $this->tab = 'payments_gateways';
 
-        $this->version = '1.1.0';
+        $this->version = '1.2.0';
         if (!defined('MPGS_VERSION')) {
             define('MPGS_VERSION', $this->version);
         }
@@ -137,6 +137,7 @@ class Mastercard extends PaymentModule
         return parent::install() &&
             $this->registerHook('paymentOptions') &&
             $this->registerHook('displayAdminOrderLeft') &&
+            $this->registerHook('displayAdminOrderSideBottom') &&
             $this->registerHook('displayBackOfficeOrderActions');
     }
 
@@ -156,6 +157,7 @@ class Mastercard extends PaymentModule
         $this->unregisterHook('paymentOptions');
         $this->unregisterHook('displayBackOfficeOrderActions');
         $this->unregisterHook('displayAdminOrderLeft');
+        $this->unregisterHook('displayAdminOrderSideBottom');
 
         $this->uninstallTab();
 
@@ -880,6 +882,29 @@ class Mastercard extends PaymentModule
      */
     public function hookDisplayAdminOrderLeft($params)
     {
+        return $this->renderAdminButtons($params, 'views/templates/hook/order_actions.tpl');
+    }
+
+    /**
+     * @param $params
+     * @return string
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
+    public function hookDisplayAdminOrderSideBottom($params)
+    {
+        return $this->renderAdminButtons($params, 'views/templates/hook/order_actions_v1770.tpl');
+    }
+
+    /**
+     * @param $params
+     * @param $view
+     * @return string
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
+    private function renderAdminButtons($params, $view)
+    {
         if ($this->active == false) {
             return '';
         }
@@ -909,9 +934,7 @@ class Mastercard extends PaymentModule
             'can_action' => $canAction,
         ));
 
-        // @todo: Show Order Reference
-
-        return $this->display(__FILE__, 'views/templates/hook/order_actions.tpl');
+        return $this->display(__FILE__, $view);
     }
 
     /**
