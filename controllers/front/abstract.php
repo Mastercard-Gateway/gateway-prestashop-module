@@ -18,6 +18,8 @@
 
 abstract class MastercardAbstractModuleFrontController extends ModuleFrontController
 {
+    const PAYMENT_DECLINED_ERROR = 'Your payment was declined.';
+
     /**
      * @var GatewayService
      */
@@ -114,9 +116,9 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             return false;
         }
 
-        if (Tools::getValue('check_3ds_enrollment') === "2") {
+        if (Tools::getValue('check_3ds_enrollment') === '2') {
 
-            if (Tools::getValue('action_type') === "init") {
+            if (Tools::getValue('action_type') === 'init') {
                 $currency = Context::getContext()->currency;
                 $order = array(
                     'currency' => $currency->iso_code,
@@ -135,7 +137,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
                 if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
                     echo json_encode([
                         'success' => false,
-                        'error' => $this->module->l('Your payment was declined.', 'abstract')
+                        'error' => $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract')
                     ]);
                     exit;
                 }
@@ -149,7 +151,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
                 exit;
             }
 
-            if (Tools::getValue('action_type') === "authenticate") {
+            if (Tools::getValue('action_type') === 'authenticate') {
                 $currency = Context::getContext()->currency;
                 $order = array(
                     'currency' => $currency->iso_code,
@@ -167,19 +169,12 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
                 $txnId = Tools::getValue('transaction_id');
 
-                /** @var ContextCore $context */
-                $context = Context::getContext();
+                $cart = Context::getContext()->cart;
 
-                /** @var CartCore $cart */
-                $cart = $context->cart;
-
-                /** @var AddressCore $billingAddress */
                 $billingAddress = new Address($cart->id_address_invoice);
 
-                /** @var AddressCore $shippingAddress */
                 $shippingAddress = new Address($cart->id_address_delivery);
 
-                /** @var CustomerCore $customer */
                 $customer = Context::getContext()->customer;
 
                 $responseUrl = Context::getContext()->link->getModuleLink('mastercard', 'hostedsession', [
@@ -204,7 +199,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
                 if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
                     echo json_encode([
                         'success' => false,
-                        'error' => $this->module->l('Your payment was declined.', 'abstract')
+                        'error' => $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract')
                     ]);
                     exit;
                 }
@@ -222,9 +217,15 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
                 exit;
             }
 
-            if (Tools::getValue('action_type') === "completed") {
+            if (Tools::getValue('action_type') === 'completed') {
                 $transactionId = Tools::getValue('transaction_id');
-                echo "<script>window.parent.treeDS2Completed('{$transactionId}')</script>";
+                $result = Tools::getValue('result');
+                $error = $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract');
+                if ($result === 'SUCCESS') {
+                    echo "<script>window.parent.treeDS2Completed('{$transactionId}')</script>";
+                } else {
+                    echo "<script>window.parent.treeDS2Failure('{$error}')</script>";
+                }
                 exit;
             }
         }
@@ -259,7 +260,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             );
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
-                $this->errors[] = $this->module->l('Your payment was declined.', 'abstract');
+                $this->errors[] = $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract');
                 $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
                     'action' => 'show'
                 )));

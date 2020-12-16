@@ -104,58 +104,7 @@
             if (is3Ds2Enabled()) {
                 document.querySelector('form.mpgs_hostedsession > input[name=check_3ds_enrollment]').value = '2';
 
-                $.post("{$hostedsession_action_url}", {
-                    check_3ds_enrollment: "2",
-                    action_type: "init",
-                    session_id: response.session.id,
-                    session_version: response.session.version
-                }, function (authInitResString) {
-                    var authInitRes = JSON.parse(authInitResString);
-                    if (!authInitRes.success) {
-                        $('#hostedsession_errors').text(authInitRes.error);
-                        document.querySelector('#payment-confirmation button').disabled = false;
-                        return;
-                    }
-
-                    $('#redirect_html').html(authInitRes.redirectHtml);
-                    eval($('#initiate-authentication-script').text());
-
-                    $.post("{$hostedsession_action_url}", {
-                        check_3ds_enrollment: "2",
-                        action_type: "authenticate",
-                        session_id: response.session.id,
-                        session_version: response.session.version,
-                        transaction_id: authInitRes.transaction_id,
-                        browserDetails: {
-                            javaEnabled: navigator.javaEnabled(),
-                            language: navigator.language,
-                            screenHeight: window.screen.height,
-                            screenWidth: window.screen.width,
-                            timeZone: new Date().getTimezoneOffset(),
-                            colorDepth: screen.colorDepth,
-                            acceptHeaders: 'application/json',
-                            '3DSecureChallengeWindowSize': 'FULL_SCREEN'
-                        }
-                    }, function (authPayerResString) {
-                        var $modal = $('#hostedsession_modal');
-                        window.treeDS2Completed = function (transactionId) {
-                            document.querySelector('form.mpgs_hostedsession > input[name=transaction_id]').value = transactionId;
-                            placeOrder(response);
-                            $modal.hide();
-                        }
-                        var authPayerRes = JSON.parse(authPayerResString);
-                        if (!authPayerRes.success) {
-                            $('#hostedsession_errors').text(authPayerRes.error);
-                            document.querySelector('#payment-confirmation button').disabled = false;
-                            return;
-                        }
-                        $modal.html(authPayerRes.redirectHtml);
-                        eval($('#authenticate-payer-script').text());
-                        if (authPayerRes.action === 'challenge') {
-                            $modal.show();
-                        }
-                    });
-                });
+                initAuth(response);
                 return;
             }
             placeOrder(response);
@@ -164,6 +113,71 @@
             errorsContainer.style.display = 'block';
             document.querySelector('#payment-confirmation button').disabled = false;
         }
+    }
+
+    function initAuth(response) {
+        return $.post("{$hostedsession_action_url}", {
+            check_3ds_enrollment: "2",
+            action_type: "init",
+            session_id: response.session.id,
+            session_version: response.session.version
+        }, function (authInitResString) {
+            var authInitRes = JSON.parse(authInitResString);
+            if (!authInitRes.success) {
+                $('#hostedsession_errors').text(authInitRes.error).show();
+                document.querySelector('#payment-confirmation button').disabled = false;
+                return;
+            }
+
+            $('#redirect_html').html(authInitRes.redirectHtml);
+            eval($('#initiate-authentication-script').text());
+
+            authPayer(response, authInitRes);
+        });
+    }
+
+    function authPayer(response, authInitRes) {
+        return $.post("{$hostedsession_action_url}", {
+            check_3ds_enrollment: "2",
+            action_type: "authenticate",
+            session_id: response.session.id,
+            session_version: response.session.version,
+            transaction_id: authInitRes.transaction_id,
+            browserDetails: {
+                javaEnabled: navigator.javaEnabled(),
+                language: navigator.language,
+                screenHeight: window.screen.height,
+                screenWidth: window.screen.width,
+                timeZone: new Date().getTimezoneOffset(),
+                colorDepth: screen.colorDepth,
+                acceptHeaders: 'application/json',
+                '3DSecureChallengeWindowSize': 'FULL_SCREEN'
+            }
+        }, function (authPayerResString) {
+            var $modal = $('#hostedsession_modal');
+            window.treeDS2Completed = function (transactionId) {
+                document.querySelector('form.mpgs_hostedsession > input[name=transaction_id]').value = transactionId;
+                placeOrder(response);
+                $modal.hide();
+            }
+
+            window.treeDS2Failure = function (error) {
+                $('#hostedsession_errors').text(error).show();
+                document.querySelector('#payment-confirmation button').disabled = false;
+                $modal.hide();
+            }
+            var authPayerRes = JSON.parse(authPayerResString);
+            if (!authPayerRes.success) {
+                $('#hostedsession_errors').text(authPayerRes.error).show();
+                document.querySelector('#payment-confirmation button').disabled = false;
+                return;
+            }
+            $modal.html(authPayerRes.redirectHtml);
+            eval($('#authenticate-payer-script').text());
+            if (authPayerRes.action === 'challenge') {
+                $modal.show();
+            }
+        });
     }
 
     function placeOrder(data) {
