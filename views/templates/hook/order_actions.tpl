@@ -46,3 +46,64 @@
     </div>
     {/if}
 </div>
+
+<script>
+    $(function() {
+        var partialRefund = $('.partial_refund_fields [type=submit]').parent();
+        var html = $.parseHTML('<p class="checkbox">'
+        + '<label for="withdrawToCustomer">'
+        + '<input type="checkbox" id="withdrawToCustomer" name="withdrawToCustomer">'
+            + 'Withdraw the funds back to customer'
+        + '</label>'
+        + '</p>')
+        partialRefund.prepend(html);
+    })
+</script>
+
+<div class="panel">
+
+    <div class="panel-heading">
+        <i class="icon-cogs"></i>
+        {l s='MasterCard Payment Refunds (Online)' mod='mastercard'}
+    </div>
+
+
+    <div class="table-responsive">
+        <table class="table" id="mpgs_refunds_table">
+            <thead>
+            <tr>
+                <th>
+                    <span class="title_box ">Id</span>
+                </th>
+                <th>
+                    <span class="title_box ">Credit Slip Number</span>
+                </th>
+                <th>
+                    <span class="title_box ">Amount</span>
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+            {foreach $refunds AS $refund}
+            <tr>
+                <td>
+                    {$refund->refund_id}
+                </td>
+                <td>
+                    {if $refund->order_slip_id}
+                    <a class="_blank" title="{l s='See the document'}" href="{$link->getAdminLink('AdminPdf', true, [], ['submitAction' => 'generateOrderSlipPDF', 'id_order_slip' => $refund->order_slip_id])|escape:'html':'UTF-8'}">
+                        {Configuration::get('PS_CREDIT_SLIP_PREFIX')}{'%06d'|sprintf:$refund->order_slip_id}
+                    </a>
+                    {else}
+                        {l s='Full refund'}
+                    {/if}
+                </td>
+                <td>
+                    {displayPrice price=$refund->total currency=$order->id_currency}
+                </td>
+            </tr>
+            {/foreach}
+            </tbody>
+        </table>
+    </div>
+</div>

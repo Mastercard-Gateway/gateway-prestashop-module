@@ -19,6 +19,7 @@
 require_once(dirname(__FILE__) . '/../../vendor/autoload.php');
 require_once(dirname(__FILE__) . '/../../gateway.php');
 require_once(dirname(__FILE__) . '/../../handlers.php');
+require_once(dirname(__FILE__) . '/../../service/MpgsRefundService.php');
 
 class AdminMpgsController extends ModuleAdminController
 {
@@ -144,25 +145,10 @@ class AdminMpgsController extends ModuleAdminController
      */
     protected function refundAction($order)
     {
-        $txnData = $this->client->getCaptureTransaction($this->module->getOrderRef($order));
-        $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
+        $refundService = new MpgsRefundService($this->module);
 
-        if (!$txn) {
-            throw new Exception('Capture/Pay transaction not found.');
-        }
-
-        $currency = Currency::getCurrency($txn->id_currency);
-
-        $response = $this->client->refund(
-            $this->module->getOrderRef($order),
-            $txn->transaction_id,
-            $txn->amount,
-            $currency['iso_code']
-        );
-
-        $processor = new ResponseProcessor($this->module);
-        $processor->handle($order, $response, array(
-            new RefundResponseHandler(),
+        $refundService->execute($order, array(
+            new TransactionResponseHandler(),
             new TransactionStatusResponseHandler(),
         ));
     }
