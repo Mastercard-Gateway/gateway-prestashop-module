@@ -886,7 +886,7 @@ class Mastercard extends PaymentModule
      */
     public function hookDisplayAdminOrderLeft($params)
     {
-        return $this->renderAdminButtons($params, 'views/templates/hook/order_actions.tpl');
+        return $this->renderActionsSections($params, 'views/templates/hook/order_actions.tpl');
     }
 
     /**
@@ -897,7 +897,7 @@ class Mastercard extends PaymentModule
      */
     public function hookDisplayAdminOrderSideBottom($params)
     {
-        return $this->renderAdminButtons($params, 'views/templates/hook/order_actions_v1770.tpl');
+        return $this->renderActionsSections($params, 'views/templates/hook/order_actions_v1770.tpl');
     }
 
     /**
@@ -956,7 +956,7 @@ class Mastercard extends PaymentModule
      * @throws PrestaShopDatabaseException
      * @throws PrestaShopException
      */
-    private function renderAdminButtons($params, $view)
+    private function renderActionsSections($params, $view)
     {
         if ($this->active == false) {
             return '';
@@ -982,6 +982,7 @@ class Mastercard extends PaymentModule
             'can_void' => $canVoid,
             'can_capture' => $canCapture,
             'can_refund' => $canRefund && !MpgsRefund::hasExistingRefunds($order->id),
+            'can_partial_refund' => !MpgsRefund::hasExistingFullRefund($order->id),
             'is_authorized' => $isAuthorized,
             'can_review' => $canReview,
             'can_action' => $canAction,

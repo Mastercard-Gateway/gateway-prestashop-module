@@ -52,8 +52,13 @@
         var partialRefund = $('.partial_refund_fields [type=submit]').parent();
         var html = $.parseHTML('<p class="checkbox">'
         + '<label for="withdrawToCustomer">'
-        + '<input type="checkbox" id="withdrawToCustomer" name="withdrawToCustomer">'
-            + 'Withdraw the funds back to customer'
+        + '<input type="checkbox"' +
+            ' id="withdrawToCustomer"' +
+            {if !$can_partial_refund}
+            ' disabled="disabled"' +
+            {/if}
+            ' name="withdrawToCustomer">'
+            + '{l s='Withdraw the funds back to customer' mod='mastercard'}'
         + '</label>'
         + '</p>')
         partialRefund.prepend(html);
@@ -81,6 +86,9 @@
                 <th>
                     <span class="title_box ">Amount</span>
                 </th>
+                <th>
+                    <span class="title_box ">Transaction ID</span>
+                </th>
             </tr>
             </thead>
             <tbody>
@@ -100,6 +108,9 @@
                 </td>
                 <td>
                     {displayPrice price=$refund->total currency=$order->id_currency}
+                </td>
+                <td>
+                    {$refund->transaction_id}
                 </td>
             </tr>
             {/foreach}

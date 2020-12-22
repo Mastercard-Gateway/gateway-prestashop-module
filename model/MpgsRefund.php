@@ -69,6 +69,22 @@ class MpgsRefund extends ObjectModel
 
     /**
      * @param string|int $orderId
+     * @return bool
+     */
+    public static function hasExistingFullRefund($orderId)
+    {
+        $sql = new DbQuery();
+        $sql->from(self::$definition['table']);
+        $sql->select('COUNT(*)');
+        $sql->where('order_id = ' . pSQL($orderId) . ' AND ' . 'order_slip_id=0');
+
+        $res = Db::getInstance()->getValue($sql);
+
+        return !!$res;
+    }
+
+    /**
+     * @param string|int $orderId
      * @return self[]
      */
     public static function getAllRefundsByOrderId($orderId)

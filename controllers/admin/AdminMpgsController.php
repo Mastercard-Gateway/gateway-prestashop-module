@@ -147,9 +147,16 @@ class AdminMpgsController extends ModuleAdminController
     {
         $refundService = new MpgsRefundService($this->module);
 
-        $refundService->execute($order, array(
+        $response = $refundService->execute($order, array(
             new TransactionResponseHandler(),
             new TransactionStatusResponseHandler(),
         ));
+
+        $refund = new MpgsRefund();
+
+        $refund->order_id = $order->id;
+        $refund->total = $response['transaction']['amount'];
+        $refund->transaction_id = $response['transaction']['id'];
+        $refund->add();
     }
 }
