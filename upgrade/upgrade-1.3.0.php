@@ -25,9 +25,7 @@ if (!defined('_PS_VERSION_')) {
  * @return bool
  * @throws PrestaShopException
  */
-function upgrade_module_1_2_0($module)
+function upgrade_module_1_3_0($module)
 {
-    Hook::registerHook($module, 'displayAdminOrderSideBottom');
-
-    return true;
+    return Hook::registerHook($module, 'actionObjectOrderSlipAddAfter');
 }

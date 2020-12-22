@@ -27,6 +27,8 @@ define('MPGS_ISO3_COUNTRIES', include dirname(__FILE__).'/iso3.php');
 require_once(dirname(__FILE__) . '/vendor/autoload.php');
 require_once(dirname(__FILE__) . '/gateway.php');
 require_once(dirname(__FILE__) . '/handlers.php');
+require_once(dirname(__FILE__) . '/service/MpgsRefundService.php');
+require_once(dirname(__FILE__) . '/model/MpgsRefund.php');
 
 /**
  * @property bool bootstrap
@@ -66,7 +68,7 @@ class Mastercard extends PaymentModule
         $this->name = 'mastercard';
         $this->tab = 'payments_gateways';
 
-        $this->version = '1.2.0';
+        $this->version = '1.3.3';
         if (!defined('MPGS_VERSION')) {
             define('MPGS_VERSION', $this->version);
         }
@@ -138,7 +140,8 @@ class Mastercard extends PaymentModule
             $this->registerHook('paymentOptions') &&
             $this->registerHook('displayAdminOrderLeft') &&
             $this->registerHook('displayAdminOrderSideBottom') &&
-            $this->registerHook('displayBackOfficeOrderActions');
+            $this->registerHook('displayBackOfficeOrderActions') &&
+            $this->registerHook('actionObjectOrderSlipAddAfter');
     }
 
     /**
@@ -158,6 +161,7 @@ class Mastercard extends PaymentModule
         $this->unregisterHook('displayBackOfficeOrderActions');
         $this->unregisterHook('displayAdminOrderLeft');
         $this->unregisterHook('displayAdminOrderSideBottom');
+        $this->unregisterHook('actionObjectOrderSlipAddAfter');
 
         $this->uninstallTab();
 
@@ -882,7 +886,7 @@ class Mastercard extends PaymentModule
      */
     public function hookDisplayAdminOrderLeft($params)
     {
-        return $this->renderAdminButtons($params, 'views/templates/hook/order_actions.tpl');
+        return $this->renderActionsSections($params, 'views/templates/hook/order_actions.tpl');
     }
 
     /**
@@ -893,7 +897,56 @@ class Mastercard extends PaymentModule
      */
     public function hookDisplayAdminOrderSideBottom($params)
     {
-        return $this->renderAdminButtons($params, 'views/templates/hook/order_actions_v1770.tpl');
+        return $this->renderActionsSections($params, 'views/templates/hook/order_actions_v1770.tpl');
+    }
+
+    /**
+     * @param array $params
+     */
+    public function hookActionObjectOrderSlipAddAfter($params)
+    {
+        /** @var OrderSlip $res */
+        $orderSlip = $params['object'];
+        $order = new Order($orderSlip->id_order);
+
+        if ($order->payment !== self::PAYMENT_CODE) {
+
+            return;
+        }
+
+        $refundService = new MpgsRefundService($this);
+        $amount = (string)($orderSlip->total_shipping_tax_incl + $orderSlip->total_products_tax_incl);
+
+        if (!Tools::getValue('withdrawToCustomer')) {
+            return;
+        }
+
+        try {
+            $response = $refundService->execute(
+                $order,
+                array(
+                    new TransactionResponseHandler()
+                ),
+                $amount,
+                'partial-' . $orderSlip->id
+            );
+
+            $refund = new MpgsRefund();
+
+            $refund->order_id = $order->id;
+            $refund->total = $amount;
+            $refund->transaction_id = $response['transaction']['id'];
+            $refund->order_slip_id = $orderSlip->id;
+            $refund->add();
+        } catch (Exception $e) {
+            $orderSlip->delete();
+            Tools::redirectAdmin((new Link())->getAdminLink('AdminOrders', true, array(), array(
+                'vieworder' => '',
+                'id_order' => $order->id
+            )));
+
+            die();
+        }
     }
 
     /**
@@ -903,7 +956,7 @@ class Mastercard extends PaymentModule
      * @throws PrestaShopDatabaseException
      * @throws PrestaShopException
      */
-    private function renderAdminButtons($params, $view)
+    private function renderActionsSections($params, $view)
     {
         if ($this->active == false) {
             return '';
@@ -928,10 +981,12 @@ class Mastercard extends PaymentModule
             'mpgs_order_ref' => $this->getOrderRef($order),
             'can_void' => $canVoid,
             'can_capture' => $canCapture,
-            'can_refund' => $canRefund,
+            'can_refund' => $canRefund && !MpgsRefund::hasExistingRefunds($order->id),
+            'can_partial_refund' => !MpgsRefund::hasExistingFullRefund($order->id),
             'is_authorized' => $isAuthorized,
             'can_review' => $canReview,
             'can_action' => $canAction,
+            'refunds' => MpgsRefund::getAllRefundsByOrderId($order->id),
         ));
 
         return $this->display(__FILE__, $view);
