@@ -8,10 +8,10 @@
     <div class="form-group row">
         <label class="col-md-3 form-control-label" for="expiry-month">{l s='Expiry:' mod='mastercard'}</label>
         <div class="col-md-3">
-            <input class="form-control" aria-label="{l s='Expiry Month:' mod='mastercard'}" type="text" maxlength="2" id="expiry-month" value="" />
+            <input class="form-control" aria-label="{l s='Expiry Month:' mod='mastercard'}" type="text" maxlength="2" id="expiry-month" value="" readonly="readonly" />
         </div>
         <div class="col-md-3">
-            <input class="form-control" aria-label="{l s='Expiry Year:' mod='mastercard'}" type="text" maxlength="2" id="expiry-year" value="" />
+            <input class="form-control" aria-label="{l s='Expiry Year:' mod='mastercard'}" type="text" maxlength="2" id="expiry-year" value="" readonly="readonly" />
         </div>
     </div>
     <div class="form-group row">
@@ -22,7 +22,11 @@
     </div>
 </section>
 
+<div id="redirect_html" style="display: none"></div>
+
 <div id="hostedsession_errors" style="color: red; display: none;" class="errors"></div>
+
+<div id="hostedsession_modal" style="display: none" class="hostedsession_modal"></div>
 
 <script async src="{$hostedsession_component_url}"></script>
 <script>
@@ -97,12 +101,83 @@
             if (is3DsEnabled()) {
                 document.querySelector('form.mpgs_hostedsession > input[name=check_3ds_enrollment]').value = '1';
             }
+            if (is3Ds2Enabled()) {
+                document.querySelector('form.mpgs_hostedsession > input[name=check_3ds_enrollment]').value = '2';
+
+                initAuth(response);
+                return;
+            }
             placeOrder(response);
         } else {
             errorsContainer.innerText = hsLoadingFailedMsg + ' (unexpected status: '+response.status+')';
             errorsContainer.style.display = 'block';
             document.querySelector('#payment-confirmation button').disabled = false;
         }
+    }
+
+    function initAuth(response) {
+        return $.post("{$hostedsession_action_url}", {
+            check_3ds_enrollment: "2",
+            action_type: "init",
+            session_id: response.session.id,
+            session_version: response.session.version
+        }, function (authInitResString) {
+            var authInitRes = JSON.parse(authInitResString);
+            if (!authInitRes.success) {
+                $('#hostedsession_errors').text(authInitRes.error).show();
+                document.querySelector('#payment-confirmation button').disabled = false;
+                return;
+            }
+
+            $('#redirect_html').html(authInitRes.redirectHtml);
+            eval($('#initiate-authentication-script').text());
+
+            authPayer(response, authInitRes);
+        });
+    }
+
+    function authPayer(response, authInitRes) {
+        return $.post("{$hostedsession_action_url}", {
+            check_3ds_enrollment: "2",
+            action_type: "authenticate",
+            session_id: response.session.id,
+            session_version: response.session.version,
+            transaction_id: authInitRes.transaction_id,
+            browserDetails: {
+                javaEnabled: navigator.javaEnabled(),
+                language: navigator.language,
+                screenHeight: window.screen.height,
+                screenWidth: window.screen.width,
+                timeZone: new Date().getTimezoneOffset(),
+                colorDepth: screen.colorDepth,
+                acceptHeaders: 'application/json',
+                '3DSecureChallengeWindowSize': 'FULL_SCREEN'
+            }
+        }, function (authPayerResString) {
+            var $modal = $('#hostedsession_modal');
+            window.treeDS2Completed = function (transactionId) {
+                document.querySelector('form.mpgs_hostedsession > input[name=transaction_id]').value = transactionId;
+                placeOrder(response);
+                $modal.hide();
+            }
+
+            window.treeDS2Failure = function (error) {
+                $('#hostedsession_errors').text(error).show();
+                document.querySelector('#payment-confirmation button').disabled = false;
+                $modal.hide();
+            }
+            var authPayerRes = JSON.parse(authPayerResString);
+            if (!authPayerRes.success) {
+                $('#hostedsession_errors').text(authPayerRes.error).show();
+                document.querySelector('#payment-confirmation button').disabled = false;
+                return;
+            }
+            $modal.html(authPayerRes.redirectHtml);
+            eval($('#authenticate-payer-script').text());
+            if (authPayerRes.action === 'challenge') {
+                $modal.show();
+            }
+        });
     }
 
     function placeOrder(data) {
@@ -112,10 +187,18 @@
     }
 
     function is3DsEnabled() {
-        {if $hostedsession_3ds}
+        {if $hostedsession_3ds == 1}
             return true;
         {else}
             return false;
+        {/if}
+    }
+
+    function is3Ds2Enabled() {
+        {if $hostedsession_3ds == 2}
+        return true;
+        {else}
+        return false;
         {/if}
     }
 
@@ -165,3 +248,25 @@
 
     loadPaymentSession();
 </script>
+
+
+<style>
+    .hostedsession_modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        z-index: 100;
+    }
+
+    .hostedsession_modal [id=threedsFrictionLessRedirect] {
+        height: 100%;
+    }
+
+    .hostedsession_modal [id=challengeFrame] {
+        width: 100%;
+        height: 100%;
+    }
+</style>

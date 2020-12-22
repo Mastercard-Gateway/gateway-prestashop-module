@@ -18,6 +18,8 @@
 
 abstract class MastercardAbstractModuleFrontController extends ModuleFrontController
 {
+    const PAYMENT_DECLINED_ERROR = 'Your payment was declined.';
+
     /**
      * @var GatewayService
      */
@@ -32,6 +34,11 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
      * @var array
      */
     public $threeDSecureData;
+
+    /**
+     * @var string
+     */
+    public $threeDSecureId;
 
     /**
      * @throws PrestaShopException
@@ -78,9 +85,9 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
         if (Tools::getValue('process_acs_result') === "1") {
             $paRes = Tools::getValue('PaRes');
-            $threeDSecureId = Tools::getValue('3DSecureId');
+            $this->threeDSecureId = Tools::getValue('3DSecureId');
 
-            if (!$paRes || !$threeDSecureId) {
+            if (!$paRes || !$this->threeDSecureId) {
                 $this->errors[] = $this->module->l('Payment error occurred (3D Secure).', 'abstract');
                 $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
                     'action' => 'show'
@@ -88,7 +95,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
                 exit;
             }
 
-            $response = $this->client->process3dsResult($threeDSecureId, $paRes);
+            $response = $this->client->process3dsResult($this->threeDSecureId, $paRes);
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
                 $this->errors[] = $this->module->l('Your payment was declined by 3D Secure.', 'abstract');
@@ -107,6 +114,120 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             );
 
             return false;
+        }
+
+        if (Tools::getValue('check_3ds_enrollment') === '2') {
+
+            if (Tools::getValue('action_type') === 'init') {
+                $currency = Context::getContext()->currency;
+                $order = array(
+                    'currency' => $currency->iso_code,
+                );
+
+                $session = array(
+                    'id' => Tools::getValue('session_id')
+                );
+
+                $response = $this->client->initiateAuthentication(
+                    $this->module->getNewOrderRef(),
+                    $session,
+                    $order
+                );
+
+                if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
+                    echo json_encode([
+                        'success' => false,
+                        'error' => $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract')
+                    ]);
+                    exit;
+                }
+
+                $res = [
+                    'success' => true,
+                    'transaction_id' => $response['transaction']['id'],
+                    'redirectHtml' => $response['authentication']['redirectHtml'],
+                ];
+                echo json_encode($res);
+                exit;
+            }
+
+            if (Tools::getValue('action_type') === 'authenticate') {
+                $currency = Context::getContext()->currency;
+                $order = array(
+                    'currency' => $currency->iso_code,
+                    'amount' => Context::getContext()->cart->getOrderTotal()
+                );
+
+                $session = array(
+                    'id' => Tools::getValue('session_id')
+                );
+
+                $device = array(
+                    'browserDetails' => Tools::getValue('browserDetails'),
+                    'ipAddress' => $_SERVER['REMOTE_ADDR']
+                );
+
+                $txnId = Tools::getValue('transaction_id');
+
+                $cart = Context::getContext()->cart;
+
+                $billingAddress = new Address($cart->id_address_invoice);
+
+                $shippingAddress = new Address($cart->id_address_delivery);
+
+                $customer = Context::getContext()->customer;
+
+                $responseUrl = Context::getContext()->link->getModuleLink('mastercard', 'hostedsession', [
+                    'session_id' => Tools::getValue('session_id'),
+                    'action_type' => 'completed',
+                    'check_3ds_enrollment' => '2'
+                ]);
+
+                $response = $this->client->authenticatePayer(
+                    $this->module->getNewOrderRef(),
+                    $session,
+                    $order,
+                    $device,
+                    $txnId,
+                    $responseUrl,
+                    $this->getContactForGateway($customer),
+                    $this->getAddressForGateway($billingAddress),
+                    $this->getAddressForGateway($shippingAddress),
+                    $this->getContactForGateway($shippingAddress)
+                );
+
+                if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
+                    echo json_encode([
+                        'success' => false,
+                        'error' => $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract')
+                    ]);
+                    exit;
+                }
+
+                $res = [
+                    'success' => true,
+                    'transaction_id' => $response['transaction']['id'],
+                    'redirectHtml' => $response['authentication']['redirectHtml'],
+                    'action' => isset($response['authentication']['payerInteraction'])
+                        && $response['authentication']['payerInteraction'] === 'REQUIRED'
+                        ? 'challenge'
+                        : 'frictionless'
+                ];
+                echo json_encode($res);
+                exit;
+            }
+
+            if (Tools::getValue('action_type') === 'completed') {
+                $transactionId = Tools::getValue('transaction_id');
+                $result = Tools::getValue('result');
+                $error = $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract');
+                if ($result === 'SUCCESS') {
+                    echo "<script>window.parent.treeDS2Completed('{$transactionId}')</script>";
+                } else {
+                    echo "<script>window.parent.treeDS2Failure('{$error}')</script>";
+                }
+                exit;
+            }
         }
 
         if (Tools::getValue('check_3ds_enrollment') === "1") {
@@ -139,7 +260,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             );
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
-                $this->errors[] = $this->module->l('Your payment was declined.', 'abstract');
+                $this->errors[] = $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract');
                 $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
                     'action' => 'show'
                 )));

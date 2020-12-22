@@ -34,10 +34,12 @@ require_once(dirname(__FILE__) . '/handlers.php');
 class Mastercard extends PaymentModule
 {
     const PAYMENT_CODE = 'MPGS';
-    const MPGS_API_VERSION = '50';
+    const MPGS_API_VERSION = '58';
 
     const PAYMENT_ACTION_PAY = 'PAY';
     const PAYMENT_ACTION_AUTHCAPTURE = 'AUTHCAPTURE';
+    const PAYMENT_CHECKOUT_SESSION_PURCHASE = 'PURCHASE';
+    const PAYMENT_CHECKOUT_SESSION_AUTHORIZE = 'AUTHORIZE';
 
     /**
      * @var string
@@ -64,7 +66,7 @@ class Mastercard extends PaymentModule
         $this->name = 'mastercard';
         $this->tab = 'payments_gateways';
 
-        $this->version = '1.1.0';
+        $this->version = '1.2.0';
         if (!defined('MPGS_VERSION')) {
             define('MPGS_VERSION', $this->version);
         }
@@ -135,6 +137,7 @@ class Mastercard extends PaymentModule
         return parent::install() &&
             $this->registerHook('paymentOptions') &&
             $this->registerHook('displayAdminOrderLeft') &&
+            $this->registerHook('displayAdminOrderSideBottom') &&
             $this->registerHook('displayBackOfficeOrderActions');
     }
 
@@ -154,6 +157,7 @@ class Mastercard extends PaymentModule
         $this->unregisterHook('paymentOptions');
         $this->unregisterHook('displayBackOfficeOrderActions');
         $this->unregisterHook('displayAdminOrderLeft');
+        $this->unregisterHook('displayAdminOrderSideBottom');
 
         $this->uninstallTab();
 
@@ -439,6 +443,7 @@ class Mastercard extends PaymentModule
         return array(
             'mpgs_hc_active' => Tools::getValue('mpgs_hc_active', Configuration::get('mpgs_hc_active')),
             'mpgs_hc_title' => $hcTitle,
+            'mpgs_hc_payment_action' => Tools::getValue('mpgs_hc_payment_action', Configuration::get('mpgs_hc_payment_action')),
             'mpgs_hc_theme' => Tools::getValue('mpgs_hc_theme', Configuration::get('mpgs_hc_theme')),
             'mpgs_hc_show_billing' => Tools::getValue('mpgs_hc_show_billing', Configuration::get('mpgs_hc_show_billing') ? : 'HIDE'),
             'mpgs_hc_show_email' => Tools::getValue('mpgs_hc_show_email', Configuration::get('mpgs_hc_show_email') ? : 'HIDE'),
@@ -541,6 +546,19 @@ class Mastercard extends PaymentModule
 //                    ),
                     array(
                         'type' => 'select',
+                        'label' => $this->l('Payment Model'),
+                        'name' => 'mpgs_hc_payment_action',
+                        'options' => array(
+                            'query' => array(
+                                array('id' => self::PAYMENT_CHECKOUT_SESSION_PURCHASE, 'name' => $this->l('Purchase (Pay)')),
+                                array('id' => self::PAYMENT_CHECKOUT_SESSION_AUTHORIZE, 'name' => $this->l('Authorize & Capture')),
+                            ),
+                            'id' => 'id',
+                            'name' => 'name',
+                        ),
+                    ),
+                    array(
+                        'type' => 'select',
                         'label' => $this->l('Order Summary display'),
                         'name' => 'mpgs_hc_show_summary',
                         'options' => array(
@@ -613,22 +631,17 @@ class Mastercard extends PaymentModule
                         ),
                     ),
                     array(
-                        'type' => 'switch',
+                        'type' => 'select',
                         'label' => $this->l('3D Secure'),
                         'name' => 'mpgs_hs_3ds',
-                        'is_bool' => true,
-                        'desc' => '',
-                        'values' => array(
-                            array(
-                                'id' => 'active_off',
-                                'value' => true,
-                                'label' => $this->l('Disabled'),
+                        'options' => array(
+                            'query' => array(
+                                array('value' => '', 'name' => $this->l('Disabled')),
+                                array('value' => '1', 'name' => $this->l('3DS')),
+                                array('value' => '2', 'name' => $this->l('EMV 3DS (3DS2)')),
                             ),
-                            array(
-                                'id' => 'active_on',
-                                'value' => false,
-                                'label' => $this->l('Enabled'),
-                            ),
+                            'id' => 'value',
+                            'name' => 'name',
                         ),
                     ),
                 ),
@@ -869,6 +882,29 @@ class Mastercard extends PaymentModule
      */
     public function hookDisplayAdminOrderLeft($params)
     {
+        return $this->renderAdminButtons($params, 'views/templates/hook/order_actions.tpl');
+    }
+
+    /**
+     * @param $params
+     * @return string
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
+    public function hookDisplayAdminOrderSideBottom($params)
+    {
+        return $this->renderAdminButtons($params, 'views/templates/hook/order_actions_v1770.tpl');
+    }
+
+    /**
+     * @param $params
+     * @param $view
+     * @return string
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
+    private function renderAdminButtons($params, $view)
+    {
         if ($this->active == false) {
             return '';
         }
@@ -898,9 +934,7 @@ class Mastercard extends PaymentModule
             'can_action' => $canAction,
         ));
 
-        // @todo: Show Order Reference
-
-        return $this->display(__FILE__, 'views/templates/hook/order_actions.tpl');
+        return $this->display(__FILE__, $view);
     }
 
     /**
