@@ -29,6 +29,7 @@ require_once(dirname(__FILE__) . '/gateway.php');
 require_once(dirname(__FILE__) . '/handlers.php');
 require_once(dirname(__FILE__) . '/service/MpgsRefundService.php');
 require_once(dirname(__FILE__) . '/model/MpgsRefund.php');
+require_once(dirname(__FILE__) . '/model/MpgsOrderSuffix.php');
 
 /**
  * @property bool bootstrap
@@ -68,7 +69,7 @@ class Mastercard extends PaymentModule
         $this->name = 'mastercard';
         $this->tab = 'payments_gateways';
 
-        $this->version = '1.3.3';
+        $this->version = '1.3.5';
         if (!defined('MPGS_VERSION')) {
             define('MPGS_VERSION', $this->version);
         }
@@ -1171,12 +1172,13 @@ class Mastercard extends PaymentModule
     /**
      * @return string
      */
-    public function getNewOrderRef()
+    public function getNewOrderRef($refershSufix = false)
     {
         $cartId = (string) Context::getContext()->cart->id;
+        $suffix = '-' . MpgsOrderSuffix::getOrderSuffixByOrderId($cartId, $refershSufix)->suffix;
         $prefix = Configuration::get('mpgs_order_prefix')?:'';
 
-        return $prefix . $cartId;
+        return $prefix . $cartId . $suffix;
     }
 
     /**
