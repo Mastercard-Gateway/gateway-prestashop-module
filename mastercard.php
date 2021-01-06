@@ -1170,12 +1170,13 @@ class Mastercard extends PaymentModule
     }
 
     /**
+     * @param bool $refreshSuffix
      * @return string
      */
-    public function getNewOrderRef($refershSufix = false)
+    public function getNewOrderRef($refreshSuffix = false)
     {
         $cartId = (string) Context::getContext()->cart->id;
-        $suffix = '-' . MpgsOrderSuffix::getOrderSuffixByOrderId($cartId, $refershSufix)->suffix;
+        $suffix = '-' . MpgsOrderSuffix::getOrderSuffixByOrderId($cartId, $refreshSuffix)->suffix;
         $prefix = Configuration::get('mpgs_order_prefix')?:'';
 
         return $prefix . $cartId . $suffix;
