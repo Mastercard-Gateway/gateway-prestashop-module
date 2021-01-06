@@ -431,3 +431,20 @@ class OrderPaymentResponseHandler extends ResponseHandler
         }
     }
 }
+
+class ResponseStatusHandler extends ResponseHandler
+{
+    /**
+     * @inheritdoc
+     */
+    public function handle($order, $response)
+    {
+        if (!isset($response['result']) || $response['result'] === 'FAILURE') {
+            throw new MasterCardPaymentException('Transaction declined');
+        }
+
+        if (!isset($response['response']['gatewayCode']) || $response['response']['gatewayCode'] === 'DECLINED') {
+            throw new MasterCardPaymentException('Transaction declined');
+        }
+    }
+}
