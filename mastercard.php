@@ -1162,7 +1162,7 @@ class Mastercard extends PaymentModule
      * @param false $refresh
      * @return string
      */
-    protected function getOrderSuffix($cartId, $refresh = false)
+    private function getOrderSuffix($cartId, $refresh = false)
     {
         $suffixModel = MpgsOrderSuffix::getOrderSuffixByOrderId($cartId, $refresh);
         return $suffixModel ? '-' . $suffixModel->suffix : '';
