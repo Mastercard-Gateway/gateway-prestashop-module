@@ -1158,15 +1158,27 @@ class Mastercard extends PaymentModule
     }
 
     /**
+     * @param string|int $cartId
+     * @param false $refresh
+     * @return string
+     */
+    protected function getOrderSuffix($cartId, $refresh = false)
+    {
+        $suffixModel = MpgsOrderSuffix::getOrderSuffixByOrderId($cartId, $refresh);
+        return $suffixModel ? '-' . $suffixModel->suffix : '';
+    }
+
+    /**
      * @param Order $order
      * @return string
      */
     public function getOrderRef($order)
     {
         $cartId = (string) $order->id_cart;
+        $suffix = $this->getOrderSuffix($cartId);
         $prefix = Configuration::get('mpgs_order_prefix')?:'';
 
-        return $prefix . $cartId;
+        return $prefix . $cartId . $suffix;
     }
 
     /**
@@ -1176,7 +1188,7 @@ class Mastercard extends PaymentModule
     public function getNewOrderRef($refreshSuffix = false)
     {
         $cartId = (string) Context::getContext()->cart->id;
-        $suffix = '-' . MpgsOrderSuffix::getOrderSuffixByOrderId($cartId, $refreshSuffix)->suffix;
+        $suffix = $this->getOrderSuffix($cartId, $refreshSuffix);
         $prefix = Configuration::get('mpgs_order_prefix')?:'';
 
         return $prefix . $cartId . $suffix;
