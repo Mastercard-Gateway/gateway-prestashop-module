@@ -50,7 +50,7 @@ class MpgsOrderSuffix extends ObjectModel
     /**
      * @param string|int $orderId
      * @param bool $refresh update hash value
-     * @return self
+     * @return self|null
      */
     public static function getOrderSuffixByOrderId($orderId, $refresh = false)
     {
@@ -63,13 +63,15 @@ class MpgsOrderSuffix extends ObjectModel
         $res = Db::getInstance()->query($sql)->fetchAll();
         if ($res) {
             $res =  self::hydrateCollection(self::class, $res);
-        } else {
+        } else if ($refresh) {
             $model = new self();
             $model->order_id = $orderId;
             $model->suffix = 1;
             $model->add();
             $res = [$model];
             $isRefreshed = true;
+        } else {
+            return null;
         }
         
         if ($refresh && !$isRefreshed) {
