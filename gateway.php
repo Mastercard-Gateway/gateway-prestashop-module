@@ -595,7 +595,7 @@ class GatewayService
         $authentication = array(),
         $threeDSVersion = '1'
     ) {
-        $txnId = '1';
+        $txnId = uniqid(sprintf('%s-', $orderId));
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
 
         $body = array(
@@ -668,7 +668,7 @@ class GatewayService
         $authentication = array(),
         $threeDSVersion = '1'
     ) {
-        $txnId = '1';
+        $txnId = uniqid(sprintf('%s-', $orderId));
         $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
 
         $body = array(

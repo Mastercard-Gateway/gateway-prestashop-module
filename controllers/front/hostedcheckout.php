@@ -29,7 +29,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
      */
     protected function createSessionAndRedirect()
     {
-        $orderId = $this->module->getNewOrderRef();
+        $orderId = $this->module->getNewOrderRef(true);
 
         $order = array(
             'id' => $orderId,
@@ -124,11 +124,15 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
      */
     protected function createOrderAndRedirect()
     {
-        $orderId = Tools::getValue('order_id');
+        $orderIdParts = explode('-', Tools::getValue('order_id'));
+        $orderIdOld = reset($orderIdParts);
         $cart = Context::getContext()->cart;
         $currency = Context::getContext()->currency;
 
-        if ($orderId !== $this->module->getNewOrderRef()) {
+        $orderId = $this->module->getNewOrderRef();
+        $orderIdParts = explode('-', $orderId);
+
+        if ($orderIdOld !== reset($orderIdParts)) {
             $this->errors[] = $this->module->l('Invalid data (order)', 'hostedcheckout');
             $this->redirectWithNotifications('index.php?controller=order&step=1');
         }

@@ -129,7 +129,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
                 );
 
                 $response = $this->client->initiateAuthentication(
-                    $this->module->getNewOrderRef(),
+                    $this->module->getNewOrderRef(true),
                     $session,
                     $order
                 );
@@ -231,6 +231,8 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
         }
 
         if (Tools::getValue('check_3ds_enrollment') === "1") {
+            // reset order id
+            $this->module->getNewOrderRef(true);
             $threeD = array(
                 'authenticationRedirect' => array(
                     'pageGenerationMode' => 'CUSTOMIZED',
