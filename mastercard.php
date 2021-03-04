@@ -1197,9 +1197,10 @@ class Mastercard extends PaymentModule
 
 
     /**
+     * @param int $deltaCents
      * @return array|null
      */
-    public function getOrderItems()
+    public function getOrderItems($deltaCents = 0)
     {
         if (!Configuration::get('mpgs_lineitems_enabled')) {
             return null;
@@ -1208,24 +1209,34 @@ class Mastercard extends PaymentModule
         $items = $this->context->cart->getProducts(false, false, $this->context->country->id, true);
         $cartItems = array();
 
+        $mustAddDelta = $deltaCents > 0;
+
         /** @var Product $item */
         foreach ($items as $item) {
-            $cartItems[] = array(
+            $catyItem = array(
                 'name' => GatewayService::safe($item['name'], 127),
                 'quantity' => GatewayService::numeric($item['cart_quantity']),
                 'sku' => GatewayService::safe($item['reference'], 127),
                 'unitPrice' => GatewayService::numeric($item['price_wt']),
             );
+            if ($mustAddDelta) {
+                $mustAddDelta = false;
+                $deltaPerItem = (ceil($deltaCents / $item['cart_quantity']) / 100);
+                $catyItem['unitPrice'] = GatewayService::numeric($item['price_wt'] - $deltaPerItem);
+            }
+
+            $cartItems[] = $catyItem;
         }
 
         return empty($cartItems) ? null : $cartItems;
     }
 
     /**
+     * @param int $deltaCents
      * @return string|null
      * @throws Exception
      */
-    public function getShippingHandlingAmount()
+    public function getShippingHandlingAmount($deltaCents = 0)
     {
         if (!Configuration::get('mpgs_lineitems_enabled')) {
             return null;
@@ -1234,16 +1245,17 @@ class Mastercard extends PaymentModule
         $total = Context::getContext()->cart->getOrderTotal();
 
         return GatewayService::numeric(
-            $total - (float)$this->getItemAmount()
+            $total - (float)$this->getItemAmount($deltaCents)
         );
     }
 
     /**
+     * @param int $deltaCents
      * @return string|null
      */
-    public function getItemAmount()
+    public function getItemAmount($deltaCents = 0)
     {
-        $items = $this->getOrderItems();
+        $items = $this->getOrderItems($deltaCents);
 
         if (!$items) {
             return null;

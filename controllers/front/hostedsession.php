@@ -151,14 +151,31 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
     {
         $currency = Context::getContext()->currency;
 
+        $deltaCents = $this->getDeltaCents();
+
         return array(
             'currency' => $currency->iso_code,
             'amount' => GatewayService::numeric(
                 Context::getContext()->cart->getOrderTotal()
             ),
-            'item' => $this->module->getOrderItems(),
-            'itemAmount' => $this->module->getItemAmount(),
-            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount(),
+            'item' => $this->module->getOrderItems($deltaCents),
+            'itemAmount' => $this->module->getItemAmount($deltaCents),
+            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaCents),
         );
+    }
+
+    /**
+     * @return int
+     */
+    protected function getDeltaCents()
+    {
+        if (!Configuration::get('mpgs_lineitems_enabled')) {
+            return 0;
+        }
+        $total = Context::getContext()->cart->getOrderTotal();
+
+        $delta = (int)(($this->module->getItemAmount() * 100) - ($total * 100));
+
+        return max($delta, 0); // cents
     }
 }
