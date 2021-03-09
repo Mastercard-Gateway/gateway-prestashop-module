@@ -156,7 +156,7 @@ abstract class ResponseHandler
             $order_payment->card_number = $txn['sourceOfFunds']['provided']['card']['number'];
             $order_payment->card_expiration = $txn['sourceOfFunds']['provided']['card']['expiry']['month'] . '/' . $txn['sourceOfFunds']['provided']['card']['expiry']['year'];
             $order_payment->card_brand = $txn['sourceOfFunds']['provided']['card']['brand'];
-            $order_payment->card_holder = $txn['sourceOfFunds']['provided']['card']['nameOnCard'];
+            $order_payment->card_holder = isset($txn['sourceOfFunds']['provided']['card']['nameOnCard']) ? $txn['sourceOfFunds']['provided']['card']['nameOnCard'] : null;
         }
 
         // Add time to the date if needed
