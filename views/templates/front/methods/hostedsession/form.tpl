@@ -2,6 +2,7 @@
     <input type="hidden" name="session_id" value="" />
     <input type="hidden" name="session_version" value="" />
     <input type="hidden" name="check_3ds_enrollment" value="" />
+    <input type="hidden" name="transaction_id" value="" />
 </form>
 <script>
     function payWithHostedSession(form) {

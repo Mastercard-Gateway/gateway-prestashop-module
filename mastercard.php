@@ -27,6 +27,9 @@ define('MPGS_ISO3_COUNTRIES', include dirname(__FILE__).'/iso3.php');
 require_once(dirname(__FILE__) . '/vendor/autoload.php');
 require_once(dirname(__FILE__) . '/gateway.php');
 require_once(dirname(__FILE__) . '/handlers.php');
+require_once(dirname(__FILE__) . '/service/MpgsRefundService.php');
+require_once(dirname(__FILE__) . '/model/MpgsRefund.php');
+require_once(dirname(__FILE__) . '/model/MpgsOrderSuffix.php');
 
 /**
  * @property bool bootstrap
@@ -34,10 +37,12 @@ require_once(dirname(__FILE__) . '/handlers.php');
 class Mastercard extends PaymentModule
 {
     const PAYMENT_CODE = 'MPGS';
-    const MPGS_API_VERSION = '50';
+    const MPGS_API_VERSION = '58';
 
     const PAYMENT_ACTION_PAY = 'PAY';
     const PAYMENT_ACTION_AUTHCAPTURE = 'AUTHCAPTURE';
+    const PAYMENT_CHECKOUT_SESSION_PURCHASE = 'PURCHASE';
+    const PAYMENT_CHECKOUT_SESSION_AUTHORIZE = 'AUTHORIZE';
 
     /**
      * @var string
@@ -64,7 +69,7 @@ class Mastercard extends PaymentModule
         $this->name = 'mastercard';
         $this->tab = 'payments_gateways';
 
-        $this->version = '1.1.0';
+        $this->version = '1.3.5';
         if (!defined('MPGS_VERSION')) {
             define('MPGS_VERSION', $this->version);
         }
@@ -135,7 +140,9 @@ class Mastercard extends PaymentModule
         return parent::install() &&
             $this->registerHook('paymentOptions') &&
             $this->registerHook('displayAdminOrderLeft') &&
-            $this->registerHook('displayBackOfficeOrderActions');
+            $this->registerHook('displayAdminOrderSideBottom') &&
+            $this->registerHook('displayBackOfficeOrderActions') &&
+            $this->registerHook('actionObjectOrderSlipAddAfter');
     }
 
     /**
@@ -154,6 +161,8 @@ class Mastercard extends PaymentModule
         $this->unregisterHook('paymentOptions');
         $this->unregisterHook('displayBackOfficeOrderActions');
         $this->unregisterHook('displayAdminOrderLeft');
+        $this->unregisterHook('displayAdminOrderSideBottom');
+        $this->unregisterHook('actionObjectOrderSlipAddAfter');
 
         $this->uninstallTab();
 
@@ -439,6 +448,7 @@ class Mastercard extends PaymentModule
         return array(
             'mpgs_hc_active' => Tools::getValue('mpgs_hc_active', Configuration::get('mpgs_hc_active')),
             'mpgs_hc_title' => $hcTitle,
+            'mpgs_hc_payment_action' => Tools::getValue('mpgs_hc_payment_action', Configuration::get('mpgs_hc_payment_action')),
             'mpgs_hc_theme' => Tools::getValue('mpgs_hc_theme', Configuration::get('mpgs_hc_theme')),
             'mpgs_hc_show_billing' => Tools::getValue('mpgs_hc_show_billing', Configuration::get('mpgs_hc_show_billing') ? : 'HIDE'),
             'mpgs_hc_show_email' => Tools::getValue('mpgs_hc_show_email', Configuration::get('mpgs_hc_show_email') ? : 'HIDE'),
@@ -541,6 +551,19 @@ class Mastercard extends PaymentModule
 //                    ),
                     array(
                         'type' => 'select',
+                        'label' => $this->l('Payment Model'),
+                        'name' => 'mpgs_hc_payment_action',
+                        'options' => array(
+                            'query' => array(
+                                array('id' => self::PAYMENT_CHECKOUT_SESSION_PURCHASE, 'name' => $this->l('Purchase (Pay)')),
+                                array('id' => self::PAYMENT_CHECKOUT_SESSION_AUTHORIZE, 'name' => $this->l('Authorize & Capture')),
+                            ),
+                            'id' => 'id',
+                            'name' => 'name',
+                        ),
+                    ),
+                    array(
+                        'type' => 'select',
                         'label' => $this->l('Order Summary display'),
                         'name' => 'mpgs_hc_show_summary',
                         'options' => array(
@@ -613,22 +636,17 @@ class Mastercard extends PaymentModule
                         ),
                     ),
                     array(
-                        'type' => 'switch',
+                        'type' => 'select',
                         'label' => $this->l('3D Secure'),
                         'name' => 'mpgs_hs_3ds',
-                        'is_bool' => true,
-                        'desc' => '',
-                        'values' => array(
-                            array(
-                                'id' => 'active_off',
-                                'value' => true,
-                                'label' => $this->l('Disabled'),
+                        'options' => array(
+                            'query' => array(
+                                array('value' => '', 'name' => $this->l('Disabled')),
+                                array('value' => '1', 'name' => $this->l('3DS')),
+                                array('value' => '2', 'name' => $this->l('EMV 3DS (3DS2)')),
                             ),
-                            array(
-                                'id' => 'active_on',
-                                'value' => false,
-                                'label' => $this->l('Enabled'),
-                            ),
+                            'id' => 'value',
+                            'name' => 'name',
                         ),
                     ),
                 ),
@@ -869,6 +887,78 @@ class Mastercard extends PaymentModule
      */
     public function hookDisplayAdminOrderLeft($params)
     {
+        return $this->renderActionsSections($params, 'views/templates/hook/order_actions.tpl');
+    }
+
+    /**
+     * @param $params
+     * @return string
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
+    public function hookDisplayAdminOrderSideBottom($params)
+    {
+        return $this->renderActionsSections($params, 'views/templates/hook/order_actions_v1770.tpl');
+    }
+
+    /**
+     * @param array $params
+     */
+    public function hookActionObjectOrderSlipAddAfter($params)
+    {
+        /** @var OrderSlip $res */
+        $orderSlip = $params['object'];
+        $order = new Order($orderSlip->id_order);
+
+        if ($order->payment !== self::PAYMENT_CODE) {
+
+            return;
+        }
+
+        $refundService = new MpgsRefundService($this);
+        $amount = (string)($orderSlip->total_shipping_tax_incl + $orderSlip->total_products_tax_incl);
+
+        if (!Tools::getValue('withdrawToCustomer')) {
+            return;
+        }
+
+        try {
+            $response = $refundService->execute(
+                $order,
+                array(
+                    new TransactionResponseHandler()
+                ),
+                $amount,
+                'partial-' . $orderSlip->id
+            );
+
+            $refund = new MpgsRefund();
+
+            $refund->order_id = $order->id;
+            $refund->total = $amount;
+            $refund->transaction_id = $response['transaction']['id'];
+            $refund->order_slip_id = $orderSlip->id;
+            $refund->add();
+        } catch (Exception $e) {
+            $orderSlip->delete();
+            Tools::redirectAdmin((new Link())->getAdminLink('AdminOrders', true, array(), array(
+                'vieworder' => '',
+                'id_order' => $order->id
+            )));
+
+            die();
+        }
+    }
+
+    /**
+     * @param $params
+     * @param $view
+     * @return string
+     * @throws PrestaShopDatabaseException
+     * @throws PrestaShopException
+     */
+    private function renderActionsSections($params, $view)
+    {
         if ($this->active == false) {
             return '';
         }
@@ -892,15 +982,15 @@ class Mastercard extends PaymentModule
             'mpgs_order_ref' => $this->getOrderRef($order),
             'can_void' => $canVoid,
             'can_capture' => $canCapture,
-            'can_refund' => $canRefund,
+            'can_refund' => $canRefund && !MpgsRefund::hasExistingRefunds($order->id),
+            'can_partial_refund' => !MpgsRefund::hasExistingFullRefund($order->id),
             'is_authorized' => $isAuthorized,
             'can_review' => $canReview,
             'can_action' => $canAction,
+            'refunds' => MpgsRefund::getAllRefundsByOrderId($order->id),
         ));
 
-        // @todo: Show Order Reference
-
-        return $this->display(__FILE__, 'views/templates/hook/order_actions.tpl');
+        return $this->display(__FILE__, $view);
     }
 
     /**
@@ -1068,26 +1158,40 @@ class Mastercard extends PaymentModule
     }
 
     /**
+     * @param string|int $cartId
+     * @param false $refresh
+     * @return string
+     */
+    private function getOrderSuffix($cartId, $refresh = false)
+    {
+        $suffixModel = MpgsOrderSuffix::getOrderSuffixByOrderId($cartId, $refresh);
+        return $suffixModel ? '-' . $suffixModel->suffix : '';
+    }
+
+    /**
      * @param Order $order
      * @return string
      */
     public function getOrderRef($order)
     {
         $cartId = (string) $order->id_cart;
+        $suffix = $this->getOrderSuffix($cartId);
         $prefix = Configuration::get('mpgs_order_prefix')?:'';
 
-        return $prefix . $cartId;
+        return $prefix . $cartId . $suffix;
     }
 
     /**
+     * @param bool $refreshSuffix
      * @return string
      */
-    public function getNewOrderRef()
+    public function getNewOrderRef($refreshSuffix = false)
     {
         $cartId = (string) Context::getContext()->cart->id;
+        $suffix = $this->getOrderSuffix($cartId, $refreshSuffix);
         $prefix = Configuration::get('mpgs_order_prefix')?:'';
 
-        return $prefix . $cartId;
+        return $prefix . $cartId . $suffix;
     }
 
     /**
@@ -1108,9 +1212,10 @@ class Mastercard extends PaymentModule
 
 
     /**
+     * @param int $deltaCents
      * @return array|null
      */
-    public function getOrderItems()
+    public function getOrderItems($deltaCents = 0)
     {
         if (!Configuration::get('mpgs_lineitems_enabled')) {
             return null;
@@ -1119,24 +1224,34 @@ class Mastercard extends PaymentModule
         $items = $this->context->cart->getProducts(false, false, $this->context->country->id, true);
         $cartItems = array();
 
+        $mustAddDelta = $deltaCents > 0;
+
         /** @var Product $item */
         foreach ($items as $item) {
-            $cartItems[] = array(
+            $catyItem = array(
                 'name' => GatewayService::safe($item['name'], 127),
                 'quantity' => GatewayService::numeric($item['cart_quantity']),
                 'sku' => GatewayService::safe($item['reference'], 127),
                 'unitPrice' => GatewayService::numeric($item['price_wt']),
             );
+            if ($mustAddDelta) {
+                $mustAddDelta = false;
+                $deltaPerItem = (ceil($deltaCents / $item['cart_quantity']) / 100);
+                $catyItem['unitPrice'] = GatewayService::numeric($item['price_wt'] - $deltaPerItem);
+            }
+
+            $cartItems[] = $catyItem;
         }
 
         return empty($cartItems) ? null : $cartItems;
     }
 
     /**
+     * @param int $deltaCents
      * @return string|null
      * @throws Exception
      */
-    public function getShippingHandlingAmount()
+    public function getShippingHandlingAmount($deltaCents = 0)
     {
         if (!Configuration::get('mpgs_lineitems_enabled')) {
             return null;
@@ -1145,16 +1260,17 @@ class Mastercard extends PaymentModule
         $total = Context::getContext()->cart->getOrderTotal();
 
         return GatewayService::numeric(
-            $total - (float)$this->getItemAmount()
+            $total - (float)$this->getItemAmount($deltaCents)
         );
     }
 
     /**
+     * @param int $deltaCents
      * @return string|null
      */
-    public function getItemAmount()
+    public function getItemAmount($deltaCents = 0)
     {
-        $items = $this->getOrderItems();
+        $items = $this->getOrderItems($deltaCents);
 
         if (!$items) {
             return null;

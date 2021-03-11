@@ -63,36 +63,21 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
      */
     protected function _postProcess($cart, $customer)
     {
-        $currency = Context::getContext()->currency;
         $session = array(
-            'id' => Tools::getValue('session_id'),
-            'version' => Tools::getValue('session_version'),
+            'id' => Tools::getValue('session_id')
         );
 
-        $orderData = array(
-            'currency' => $currency->iso_code,
-            'amount' => GatewayService::numeric(
-                Context::getContext()->cart->getOrderTotal()
-            ),
-            'item' => $this->module->getOrderItems(),
-            'itemAmount' => $this->module->getItemAmount(),
-            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount(),
-        );
+        $authentication = [
+            'transactionId' => Tools::getValue('transaction_id')
+        ];
 
-        /** @var ContextCore $context */
-        $context = Context::getContext();
+        $treeDSVersion = Configuration::get('mpgs_hs_3ds');
 
-        /** @var CartCore $cart */
-        $cart = $context->cart;
+        $orderData = $this->getOrderData();
 
-        /** @var AddressCore $billingAddress */
         $billingAddress = new Address($cart->id_address_invoice);
 
-        /** @var AddressCore $shippingAddress */
         $shippingAddress = new Address($cart->id_address_delivery);
-
-        /** @var CustomerCore $customer */
-        $customer = Context::getContext()->customer;
 
         // Create order before the payment occurs
         $this->module->validateOrder(
@@ -102,7 +87,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             MasterCard::PAYMENT_CODE,
             null,
             array(),
-            $currency->id,
+            Context::getContext()->currency->id,
             false,
             $customer->secure_key
         );
@@ -115,12 +100,14 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             $response = $this->client->authorize(
                 $this->module->getNewOrderRef(),
                 $orderData,
-                $this->threeDSecureData ? : null,
+                $this->threeDSecureId,
                 $session,
                 $this->getContactForGateway($customer),
                 $this->getAddressForGateway($billingAddress),
                 $this->getAddressForGateway($shippingAddress),
-                $this->getContactForGateway($shippingAddress)
+                $this->getContactForGateway($shippingAddress),
+                $authentication,
+                $treeDSVersion
             );
 
             $processor = new ResponseProcessor($this->module);
@@ -134,23 +121,62 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             $response = $this->client->pay(
                 $this->module->getNewOrderRef(),
                 $orderData,
-                $this->threeDSecureData ? : null,
+                $this->threeDSecureId,
                 $session,
                 $this->getContactForGateway($customer),
                 $this->getAddressForGateway($billingAddress),
                 $this->getAddressForGateway($shippingAddress),
-                $this->getContactForGateway($shippingAddress)
+                $this->getContactForGateway($shippingAddress),
+                $authentication,
+                $treeDSVersion
             );
 
             $processor = new ResponseProcessor($this->module);
             $processor->handle($order, $response, array(
                 new RiskResponseHandler(),
                 new CaptureResponseHandler(),
+                new ResponseStatusHandler(),
                 new TransactionStatusResponseHandler(),
             ));
 
         } else {
             throw new Exception('Unexpected response from the Payment Gateway');
         }
+    }
+
+    /**
+     * @return array
+     * @throws Exception
+     */
+    protected function getOrderData()
+    {
+        $currency = Context::getContext()->currency;
+
+        $deltaCents = $this->getDeltaCents();
+
+        return array(
+            'currency' => $currency->iso_code,
+            'amount' => GatewayService::numeric(
+                Context::getContext()->cart->getOrderTotal()
+            ),
+            'item' => $this->module->getOrderItems($deltaCents),
+            'itemAmount' => $this->module->getItemAmount($deltaCents),
+            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaCents),
+        );
+    }
+
+    /**
+     * @return int
+     */
+    protected function getDeltaCents()
+    {
+        if (!Configuration::get('mpgs_lineitems_enabled')) {
+            return 0;
+        }
+        $total = Context::getContext()->cart->getOrderTotal();
+
+        $delta = (int)(($this->module->getItemAmount() * 100) - ($total * 100));
+
+        return max($delta, 0); // cents
     }
 }
