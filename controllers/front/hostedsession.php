@@ -164,19 +164,4 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaCents),
         );
     }
-
-    /**
-     * @return int
-     */
-    protected function getDeltaCents()
-    {
-        if (!Configuration::get('mpgs_lineitems_enabled')) {
-            return 0;
-        }
-        $total = Context::getContext()->cart->getOrderTotal();
-
-        $delta = (int)(($this->module->getItemAmount() * 100) - ($total * 100));
-
-        return max($delta, 0); // cents
-    }
 }
