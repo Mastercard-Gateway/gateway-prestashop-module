@@ -326,4 +326,19 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             'phone' => GatewayService::safeProperty($customer, 'phone'),
         );
     }
+
+    /**
+     * @return int
+     */
+    protected function getDeltaCents()
+    {
+        if (!Configuration::get('mpgs_lineitems_enabled')) {
+            return 0;
+        }
+        $total = Context::getContext()->cart->getOrderTotal();
+
+        $delta = round(($this->module->getItemAmount() * 100) - ($total * 100));
+
+        return max($delta, 0); // cents
+    }
 }
