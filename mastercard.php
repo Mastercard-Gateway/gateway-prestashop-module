@@ -142,7 +142,11 @@ class Mastercard extends PaymentModule
             $this->registerHook('displayAdminOrderLeft') &&
             $this->registerHook('displayAdminOrderSideBottom') &&
             $this->registerHook('displayBackOfficeOrderActions') &&
-            $this->registerHook('actionObjectOrderSlipAddAfter');
+            $this->registerHook('actionObjectOrderSlipAddAfter') &&
+            $this->upgrade_module_1_2_0() && // Run update script for new installation
+            $this->upgrade_module_1_3_0() && // Run update script for new installation
+            $this->upgrade_module_1_3_3() && // Run update script for new installation
+            $this->upgrade_module_1_3_5(); // Run update script for new installation
     }
 
     /**
@@ -1282,5 +1286,61 @@ class Mastercard extends PaymentModule
         }
 
         return GatewayService::numeric($amount);
+    }
+
+    /**
+     * @return bool
+     * @throws PrestaShopException
+     */
+    public function upgrade_module_1_2_0()
+    {
+        return Hook::registerHook($this, 'displayAdminOrderSideBottom');
+    }
+
+    /**
+     * @return bool
+     * @throws PrestaShopException
+     */
+    public function upgrade_module_1_3_0()
+    {
+        return Hook::registerHook($this, 'actionObjectOrderSlipAddAfter');
+    }
+
+    /**
+     * @return bool
+     */
+    public function upgrade_module_1_3_3()
+    {
+        $dbPrefix = _DB_PREFIX_;
+        $mysqlEngine = _MYSQL_ENGINE_;
+        $query = <<<EOT
+CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_refunds` (
+    `refund_id` int(10) unsigned NOT NULL auto_increment,
+    `order_id` int(10) unsigned NOT NULL,
+    `order_slip_id` int(10) unsigned,
+    `total` float NOT NULL,
+    `transaction_id` varchar(255) NOT NULL,
+     PRIMARY KEY  (`refund_id`)
+) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;
+EOT;
+        return DB::getInstance()->execute($query);
+    }
+
+    /**
+     * @return bool
+     */
+    public function upgrade_module_1_3_5()
+    {
+        $dbPrefix = _DB_PREFIX_;
+        $mysqlEngine = _MYSQL_ENGINE_;
+        $query = <<<EOT
+CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_order_suffix` (
+    `order_suffix_id` int(10) unsigned NOT NULL auto_increment,
+    `order_id` int(10) unsigned NOT NULL,
+    `suffix` int(10) unsigned NOT NULL,
+     PRIMARY KEY  (`order_suffix_id`)
+) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;
+EOT;
+        return DB::getInstance()->execute($query);
     }
 }

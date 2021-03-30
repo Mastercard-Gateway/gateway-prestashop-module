@@ -23,19 +23,8 @@ if (!defined('_PS_VERSION_')) {
 /**
  * @param Mastercard $module
  * @return bool
- * @throws PrestaShopException
  */
 function upgrade_module_1_3_5($module)
 {
-    $dbPrefix = _DB_PREFIX_;
-    $mysqlEngine = _MYSQL_ENGINE_;
-    $query = <<<EOT
-CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_order_suffix` (
-    `order_suffix_id` int(10) unsigned NOT NULL auto_increment,
-    `order_id` int(10) unsigned NOT NULL,
-    `suffix` int(10) unsigned NOT NULL,
-     PRIMARY KEY  (`order_suffix_id`)
-) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;
-EOT;
-    return DB::getInstance()->execute($query);
+    return $module->upgrade_module_1_3_5();
 }
