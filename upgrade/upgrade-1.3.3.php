@@ -23,21 +23,8 @@ if (!defined('_PS_VERSION_')) {
 /**
  * @param Mastercard $module
  * @return bool
- * @throws PrestaShopException
  */
 function upgrade_module_1_3_3($module)
 {
-    $dbPrefix = _DB_PREFIX_;
-    $mysqlEngine = _MYSQL_ENGINE_;
-    $query = <<<EOT
-CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_refunds` (
-    `refund_id` int(10) unsigned NOT NULL auto_increment,
-    `order_id` int(10) unsigned NOT NULL,
-    `order_slip_id` int(10) unsigned,
-    `total` float NOT NULL,
-    `transaction_id` varchar(255) NOT NULL,
-     PRIMARY KEY  (`refund_id`)
-) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;
-EOT;
-    return DB::getInstance()->execute($query);
+    return $module->upgrade_module_1_3_3();
 }

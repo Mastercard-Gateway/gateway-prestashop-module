@@ -27,5 +27,5 @@ if (!defined('_PS_VERSION_')) {
  */
 function upgrade_module_1_3_0($module)
 {
-    return Hook::registerHook($module, 'actionObjectOrderSlipAddAfter');
+    return $module->upgrade_module_1_3_0();
 }

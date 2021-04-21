@@ -23,11 +23,8 @@ if (!defined('_PS_VERSION_')) {
 /**
  * @param Mastercard $module
  * @return bool
- * @throws PrestaShopException
  */
 function upgrade_module_1_2_0($module)
 {
-    Hook::registerHook($module, 'displayAdminOrderSideBottom');
-
-    return true;
+    return $module->upgrade_module_1_2_0();
 }
