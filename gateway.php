@@ -602,7 +602,8 @@ class GatewayService
             'apiOperation' => 'AUTHORIZE',
             'partnerSolutionId' => $this->getSolutionId(),
             'order' => array_merge($order, array(
-                'notificationUrl' => $this->webhookUrl
+                'notificationUrl' => $this->webhookUrl,
+                'reference' => $orderId
             )),
             'billing' => array(
                 'address' => $billing
@@ -616,6 +617,9 @@ class GatewayService
                 'type' => 'CARD'
             ),
             'session' => $session,
+            'transaction' => array(
+                'reference' => $txnId
+            ),
         );
 
         if ($threeDSVersion == 1) {
@@ -675,7 +679,8 @@ class GatewayService
             'apiOperation' => 'PAY',
             'partnerSolutionId' => $this->getSolutionId(),
             'order' => array_merge($order, array(
-                'notificationUrl' => $this->webhookUrl
+                'notificationUrl' => $this->webhookUrl,
+                'reference' => $orderId
             )),
             'billing' => array(
                 'address' => $billing
@@ -689,6 +694,9 @@ class GatewayService
                 'type' => 'CARD'
             ),
             'session' => $session,
+            'transaction' => array(
+                'reference' => $txnId
+            ),
         );
 
         if ($threeDSVersion == 1) {
