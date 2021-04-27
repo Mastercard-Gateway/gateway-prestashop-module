@@ -444,7 +444,12 @@ class GatewayService
                 'purpose' => 'PAYMENT_TRANSACTION'
             ],
             'session' => $session,
-            'order' => $order
+            'order' => array_merge($order, array(
+                'reference' => $orderId
+            )),
+            'transaction' => array(
+                'reference' => $txnId
+            ),
         )));
 
         $response = $this->client->sendRequest($request);
@@ -492,7 +497,9 @@ class GatewayService
             ],
             'device' => $device,
             'session' => $session,
-            'order' => $order,
+            'order' => array_merge($order, array(
+                'reference' => $orderId
+            )),
             'billing' => array(
                 'address' => $billing
             ),
@@ -501,6 +508,9 @@ class GatewayService
                 'contact' => $shippingContact,
             ),
             'customer' => $customer,
+            'transaction' => array(
+                'reference' => $txnId
+            ),
         )));
 
         $response = $this->client->sendRequest($request);
@@ -537,6 +547,7 @@ class GatewayService
         $shipping = array(),
         $shippingContact = array()
     ) {
+        $txnId = uniqid(sprintf('%s-', $order['id']));
         $uri = $this->apiUrl . 'session';
 
         $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode(array(
@@ -554,6 +565,9 @@ class GatewayService
             ),
             'interaction' => $interaction,
             'customer' => $customer,
+            'transaction' => array(
+                'reference' => $txnId
+            ),
         )));
 
         $response = $this->client->sendRequest($request);
@@ -828,7 +842,8 @@ class GatewayService
             'apiOperation' => 'VOID',
             'partnerSolutionId' => $this->getSolutionId(),
             'transaction' => array(
-                'targetTransactionId' => $txnId
+                'targetTransactionId' => $txnId,
+                'reference' => $txnId,
             )
         )));
         $response = $this->client->sendRequest($request);
@@ -866,10 +881,12 @@ class GatewayService
             'partnerSolutionId' => $this->getSolutionId(),
             'transaction' => array(
                 'amount' => $amount,
-                'currency' => $currency
+                'currency' => $currency,
+                'reference' => $newTxnId,
             ),
             'order' => array(
-                'notificationUrl' => $this->webhookUrl
+                'notificationUrl' => $this->webhookUrl,
+                'reference' => $orderId,
             )
         )));
 
@@ -907,10 +924,12 @@ class GatewayService
             'partnerSolutionId' => $this->getSolutionId(),
             'transaction' => array(
                 'amount' => $amount,
-                'currency' => $currency
+                'currency' => $currency,
+                'reference' => $newTxnId,
             ),
             'order' => array(
-                'notificationUrl' => $this->webhookUrl
+                'notificationUrl' => $this->webhookUrl,
+                'reference' => $orderId,
             )
         )));
 

@@ -35,6 +35,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
 
         $order = array(
             'id' => $orderId,
+            'reference' => $orderId,
             'currency' => Context::getContext()->currency->iso_code,
             'amount' => GatewayService::numeric(
                 Context::getContext()->cart->getOrderTotal()
