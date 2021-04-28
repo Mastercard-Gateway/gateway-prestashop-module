@@ -497,9 +497,7 @@ class GatewayService
             ],
             'device' => $device,
             'session' => $session,
-            'order' => array_merge($order, array(
-                'reference' => $orderId
-            )),
+            'order' => $order,
             'billing' => array(
                 'address' => $billing
             ),
@@ -508,9 +506,6 @@ class GatewayService
                 'contact' => $shippingContact,
             ),
             'customer' => $customer,
-            'transaction' => array(
-                'reference' => $txnId
-            ),
         )));
 
         $response = $this->client->sendRequest($request);
