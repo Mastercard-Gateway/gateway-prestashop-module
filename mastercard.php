@@ -1355,7 +1355,7 @@ CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_refunds` (
     `refund_id` int(10) unsigned NOT NULL auto_increment,
     `order_id` int(10) unsigned NOT NULL,
     `order_slip_id` int(10) unsigned,
-    `total` float NOT NULL,
+    `total` decimal(20, 6) default 0.000000 NOT NULL,
     `transaction_id` varchar(255) NOT NULL,
      PRIMARY KEY  (`refund_id`)
 ) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;
