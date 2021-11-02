@@ -150,18 +150,17 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
      */
     protected function getOrderData()
     {
+        $deltaAmount = $this->getDeltaAmount();
+
         $currency = Context::getContext()->currency;
-
-        $deltaCents = $this->getDeltaCents();
-
         return array(
             'currency' => $currency->iso_code,
             'amount' => GatewayService::numeric(
                 Context::getContext()->cart->getOrderTotal()
             ),
-            'item' => $this->module->getOrderItems($deltaCents),
-            'itemAmount' => $this->module->getItemAmount($deltaCents),
-            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaCents),
+            'item' => $this->module->getOrderItems($deltaAmount),
+            'itemAmount' => $this->module->getItemAmount($deltaAmount),
+            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaAmount),
         );
     }
 }

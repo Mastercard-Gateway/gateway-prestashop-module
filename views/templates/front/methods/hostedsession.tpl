@@ -28,7 +28,7 @@
 
 <div id="hostedsession_modal" style="display: none" class="hostedsession_modal"></div>
 
-<script async src="{$hostedsession_component_url}"></script>
+<script async src="{$hostedsession_component_url nofilter}"></script>
 <script>
     if (self !== top) {
         top.location = self.location;
@@ -116,7 +116,7 @@
     }
 
     function initAuth(response) {
-        return $.post("{$hostedsession_action_url}", {
+        return $.post("{$hostedsession_action_url nofilter}", {
             check_3ds_enrollment: "2",
             action_type: "init",
             session_id: response.session.id,
@@ -137,7 +137,7 @@
     }
 
     function authPayer(response, authInitRes) {
-        return $.post("{$hostedsession_action_url}", {
+        return $.post("{$hostedsession_action_url nofilter}", {
             check_3ds_enrollment: "2",
             action_type: "authenticate",
             session_id: response.session.id,

@@ -1,5 +1,5 @@
-<form id="payment-form" method="POST" onsubmit="return payWithHostedCheckout()" action="{$hostedcheckout_action_url nofilter}"></form>
-<script async src="{$hostedcheckout_component_url}"
+<form id="payment-form" method="POST" onsubmit="return payWithHostedCheckout()" action="{$hostedcheckout_action_url}"></form>
+<script async src="{$hostedcheckout_component_url nofilter}"
         data-error="errorCallback"
         data-complete="completeCallback"
         data-cancel="cancelCallback">

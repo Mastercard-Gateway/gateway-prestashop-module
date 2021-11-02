@@ -31,7 +31,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
     {
         $orderId = $this->module->getNewOrderRef(true);
 
-        $deltaCents = $this->getDeltaCents();
+        $deltaAmount = $this->getDeltaAmount();
 
         $order = array(
             'id' => $orderId,
@@ -40,9 +40,9 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
             'amount' => GatewayService::numeric(
                 Context::getContext()->cart->getOrderTotal()
             ),
-            'item' => $this->module->getOrderItems($deltaCents),
-            'itemAmount' => $this->module->getItemAmount($deltaCents),
-            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaCents),
+            'item' => $this->module->getOrderItems($deltaAmount),
+            'itemAmount' => $this->module->getItemAmount($deltaAmount),
+            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaAmount),
         );
 
         $interaction = array(
