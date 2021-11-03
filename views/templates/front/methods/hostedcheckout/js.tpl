@@ -11,7 +11,7 @@
 
     <p><h2>{l s='Transaction in progress, please wait.' mod='mastercard'}</h2></p>
 
-    <script src="{$hostedcheckout_component_url}"
+    <script src="{$hostedcheckout_component_url nofilter}"
             data-error="errorCallback"
             data-cancel="cancelCallback"
             data-beforeRedirect="beforeRedirect"
@@ -25,7 +25,7 @@
         var successIndicator = "{$mpgs_config.success_indicator|escape:javascript}";
         var orderId = "{$mpgs_config.order_id|escape:javascript}";
         var resultIndicator = null;
-        var baseUrl = "{$urls.current_url}";
+        var baseUrl = "{$urls.current_url nofilter}";
 
         // This method preserves the current state of successIndicator and orderId, so they're not overwritten when we return to this page after redirect
         function beforeRedirect() {

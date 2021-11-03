@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2020 Mastercard
+ * Copyright (c) 2019-2021 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
     {
         $orderId = $this->module->getNewOrderRef(true);
 
-        $deltaCents = $this->getDeltaCents();
+        $deltaAmount = $this->getDeltaAmount();
 
         $order = array(
             'id' => $orderId,
@@ -40,9 +40,9 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
             'amount' => GatewayService::numeric(
                 Context::getContext()->cart->getOrderTotal()
             ),
-            'item' => $this->module->getOrderItems($deltaCents),
-            'itemAmount' => $this->module->getItemAmount($deltaCents),
-            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaCents),
+            'item' => $this->module->getOrderItems($deltaAmount),
+            'itemAmount' => $this->module->getItemAmount($deltaAmount),
+            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaAmount),
         );
 
         $interaction = array(
