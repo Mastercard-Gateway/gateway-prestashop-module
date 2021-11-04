@@ -73,8 +73,8 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
             return;
         }
 
-        $webhoolSecret = $this->module->getConfigValue('mpgs_webhook_secret');
-        if (!$webhoolSecret || $webhoolSecret !== $headers[self::HEADER_WEBHOOK_SECRET]) {
+        $webhookSecret = $this->module->getConfigValue('mpgs_webhook_secret');
+        if (!$webhookSecret || $webhookSecret !== $headers[self::HEADER_WEBHOOK_SECRET]) {
             $this->logger->critical('Invalid or missing webhook secret', array(
                 'environment' => $_SERVER
             ));

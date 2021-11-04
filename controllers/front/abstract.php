@@ -89,9 +89,16 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
             if (!$paRes || !$this->threeDSecureId) {
                 $this->errors[] = $this->module->l('Payment error occurred (3D Secure).', 'abstract');
-                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
-                    'action' => 'show'
-                )));
+                $this->redirectWithNotifications(
+                    Context::getContext()->link->getPageLink(
+                        'order',
+                        true,
+                        null,
+                        array(
+                            'action' => 'show',
+                        )
+                    )
+                );
                 exit;
             }
 
@@ -99,133 +106,78 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
                 $this->errors[] = $this->module->l('Your payment was declined by 3D Secure.', 'abstract');
-                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
-                    'action' => 'show'
-                )));
+                $this->redirectWithNotifications(
+                    Context::getContext()->link->getPageLink(
+                        'order',
+                        true,
+                        null,
+                        array(
+                            'action' => 'show',
+                        ),
+                        true
+                    )
+                );
                 exit;
             }
 
             $this->threeDSecureData = array(
-                'acsEci' => $response['3DSecure']['acsEci'],
+                'acsEci'              => $response['3DSecure']['acsEci'],
                 'authenticationToken' => $response['3DSecure']['authenticationToken'],
-                'paResStatus' => $response['3DSecure']['paResStatus'],
-                'veResEnrolled' => $response['3DSecure']['veResEnrolled'],
-                'xid' => $response['3DSecure']['xid'],
+                'paResStatus'         => $response['3DSecure']['paResStatus'],
+                'veResEnrolled'       => $response['3DSecure']['veResEnrolled'],
+                'xid'                 => $response['3DSecure']['xid'],
             );
 
             return false;
         }
 
         if (Tools::getValue('check_3ds_enrollment') === '2') {
-
-            if (Tools::getValue('action_type') === 'init') {
+            if (Tools::getValue('action_type') === 'update_session') {
                 $currency = Context::getContext()->currency;
                 $order = array(
                     'currency' => $currency->iso_code,
+                    'amount'   => Context::getContext()->cart->getOrderTotal(),
                 );
 
-                $session = array(
-                    'id' => Tools::getValue('session_id')
+                $orderId = Tools::getValue('order_id');
+                $sessionId = Tools::getValue('session_id');
+
+                $responseUrl = Context::getContext()->link->getModuleLink(
+                    'mastercard',
+                    'threedsresponse',
+                    array(
+                        'session_id'           => $sessionId,
+                        'action_type'          => 'completed',
+                        'check_3ds_enrollment' => '2',
+                    ),
+                    true
                 );
 
-                $response = $this->client->initiateAuthentication(
-                    $this->module->getNewOrderRef(true),
-                    $session,
-                    $order
+                $auth = array(
+                    'channel'             => 'PAYER_BROWSER',
+                    'redirectResponseUrl' => $responseUrl,
                 );
 
-                if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
-                    echo json_encode([
-                        'success' => false,
-                        'error' => $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract')
-                    ]);
-                    exit;
-                }
-
-                $res = [
-                    'success' => true,
-                    'transaction_id' => $response['transaction']['id'],
-                    'redirectHtml' => $response['authentication']['redirectHtml'],
-                ];
-                echo json_encode($res);
-                exit;
-            }
-
-            if (Tools::getValue('action_type') === 'authenticate') {
-                $currency = Context::getContext()->currency;
-                $order = array(
-                    'currency' => $currency->iso_code,
-                    'amount' => Context::getContext()->cart->getOrderTotal()
+                $transaction = array(
+                    'id' => uniqid(sprintf('3DS-%s-', $orderId))
                 );
 
-                $session = array(
-                    'id' => Tools::getValue('session_id')
-                );
-
-                $device = array(
-                    'browserDetails' => Tools::getValue('browserDetails'),
-                    'ipAddress' => $_SERVER['REMOTE_ADDR']
-                );
-
-                $txnId = Tools::getValue('transaction_id');
-
-                $cart = Context::getContext()->cart;
-
-                $billingAddress = new Address($cart->id_address_invoice);
-
-                $shippingAddress = new Address($cart->id_address_delivery);
-
-                $customer = Context::getContext()->customer;
-
-                $responseUrl = Context::getContext()->link->getModuleLink('mastercard', 'hostedsession', [
-                    'session_id' => Tools::getValue('session_id'),
-                    'action_type' => 'completed',
-                    'check_3ds_enrollment' => '2'
-                ]);
-
-                $response = $this->client->authenticatePayer(
-                    $this->module->getNewOrderRef(),
-                    $session,
+                $response = $this->client->updateSession(
+                    $orderId,
+                    $sessionId,
                     $order,
-                    $device,
-                    $txnId,
-                    $responseUrl,
-                    $this->getContactForGateway($customer),
-                    $this->getAddressForGateway($billingAddress),
-                    $this->getAddressForGateway($shippingAddress),
-                    $this->getContactForGateway($shippingAddress)
+                    $auth,
+                    $transaction
                 );
 
-                if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
-                    echo json_encode([
-                        'success' => false,
-                        'error' => $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract')
-                    ]);
-                    exit;
-                }
+                $res = array(
+                    'session'     => $response['session'] ?? [],
+                    'order'       => $response['order'] ?? [],
+                    'transaction' => $response['transaction'] ?? [],
+                    'version'     => $response['version'] ?? [],
+                );
 
-                $res = [
-                    'success' => true,
-                    'transaction_id' => $response['transaction']['id'],
-                    'redirectHtml' => $response['authentication']['redirectHtml'],
-                    'action' => isset($response['authentication']['payerInteraction'])
-                        && $response['authentication']['payerInteraction'] === 'REQUIRED'
-                        ? 'challenge'
-                        : 'frictionless'
-                ];
                 echo json_encode($res);
-                exit;
-            }
-
-            if (Tools::getValue('action_type') === 'completed') {
-                $transactionId = Tools::getValue('transaction_id');
-                $result = Tools::getValue('result');
-                $error = $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract');
-                if ($result === 'SUCCESS') {
-                    echo "<script>window.parent.treeDS2Completed('{$transactionId}')</script>";
-                } else {
-                    echo "<script>window.parent.treeDS2Failure('{$error}')</script>";
-                }
                 exit;
             }
         }
@@ -236,22 +188,22 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             $threeD = array(
                 'authenticationRedirect' => array(
                     'pageGenerationMode' => 'CUSTOMIZED',
-                    'responseUrl' => $this->context->link->getModuleLink(
+                    'responseUrl'        => $this->context->link->getModuleLink(
                         $this->module->name,
                         Tools::getValue('controller'),
                         array(),
                         true
-                    )
-                )
+                    ),
+                ),
             );
 
             $session = array(
-                'id' => Tools::getValue('session_id')
+                'id' => Tools::getValue('session_id'),
             );
 
             $currency = Context::getContext()->currency;
             $order = array(
-                'amount' => Context::getContext()->cart->getOrderTotal(),
+                'amount'   => Context::getContext()->cart->getOrderTotal(),
                 'currency' => $currency->iso_code,
             );
 
@@ -263,38 +215,50 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
                 $this->errors[] = $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract');
-                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
-                    'action' => 'show'
-                )));
+                $this->redirectWithNotifications(
+                    Context::getContext()->link->getPageLink(
+                        'order',
+                        true,
+                        null,
+                        array(
+                            'action' => 'show',
+                        )
+                    )
+                );
                 exit;
             }
 
             if (isset($response['3DSecure']['authenticationRedirect'])) {
                 $tdsAuth = $response['3DSecure']['authenticationRedirect']['customized'];
-                $this->context->smarty->assign(array(
-                    'authenticationRedirect' => $tdsAuth,
-                    'returnUrl' => $this->context->link->getModuleLink(
-                        $this->module->name,
-                        Tools::getValue('controller'),
-                        array(
-                            '3DSecureId' => $response['3DSecureId'],
-                            'process_acs_result' => '1',
-                            'session_id' => Tools::getValue('session_id'),
-                            'session_version' => Tools::getValue('session_version'),
+                $this->context->smarty->assign(
+                    array(
+                        'authenticationRedirect' => $tdsAuth,
+                        'returnUrl'              => $this->context->link->getModuleLink(
+                            $this->module->name,
+                            Tools::getValue('controller'),
+                            array(
+                                '3DSecureId'         => $response['3DSecureId'],
+                                'process_acs_result' => '1',
+                                'session_id'         => Tools::getValue('session_id'),
+                                'session_version'    => Tools::getValue('session_version'),
+                            ),
+                            true
                         ),
-                        true
                     )
-                ));
+                );
 
                 $this->setTemplate('module:mastercard/views/templates/front/threedsecure/form.tpl');
+
                 return true;
             }
         }
+
         return false;
     }
 
     /**
      * @param AddressCore $address
+     *
      * @return array
      */
     public function getAddressForGateway($address)
@@ -303,27 +267,28 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
         $country = new Country($address->id_country);
 
         return array(
-            'city' => GatewayService::safe($address->city, 100),
-            'country' => $this->module->iso2ToIso3($country->iso_code),
+            'city'        => GatewayService::safe($address->city, 100),
+            'country'     => $this->module->iso2ToIso3($country->iso_code),
             'postcodeZip' => GatewayService::safe($address->postcode, 10),
-            'street' => GatewayService::safe($address->address1, 100),
-            'street2' => GatewayService::safe($address->address2, 100),
-            'company' => GatewayService::safe($address->company, 100)
+            'street'      => GatewayService::safe($address->address1, 100),
+            'street2'     => GatewayService::safe($address->address2, 100),
+            'company'     => GatewayService::safe($address->company, 100),
         );
     }
 
     /**
      * @param CustomerCore|AddressCore $customer
+     *
      * @return array
      */
     public function getContactForGateway($customer)
     {
         return array(
-            'firstName' => GatewayService::safe($customer->firstname, 50),
-            'lastName' => GatewayService::safe($customer->lastname, 50),
-            'email' => GatewayService::safeProperty($customer, 'email'),
+            'firstName'   => GatewayService::safe($customer->firstname, 50),
+            'lastName'    => GatewayService::safe($customer->lastname, 50),
+            'email'       => GatewayService::safeProperty($customer, 'email'),
             'mobilePhone' => GatewayService::safeProperty($customer, 'phone_mobile'),
-            'phone' => GatewayService::safeProperty($customer, 'phone'),
+            'phone'       => GatewayService::safeProperty($customer, 'phone'),
         );
     }
 
