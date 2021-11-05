@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2020 Mastercard
+ * Copyright (c) 2019-2021 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -198,8 +198,13 @@ class GatewayService
      *
      * @throws \Exception
      */
-    public function __construct($baseUrl, $apiVersion, $merchantId, $password, $webhookUrl)
-    {
+    public function __construct(
+        $baseUrl,
+        $apiVersion,
+        $merchantId,
+        $password,
+        $webhookUrl
+    ) {
         $this->webhookUrl = $webhookUrl;
 
         $logger = new Logger('mastercard');
@@ -210,7 +215,7 @@ class GatewayService
 
         $this->messageFactory = new GuzzleMessageFactory();
 
-        $this->apiUrl = 'https://'.$baseUrl.'/api/rest/version/'.$apiVersion.'/merchant/'.$merchantId.'/';
+        $this->apiUrl = "https://{$baseUrl}/api/rest/version/{$apiVersion}/merchant/{$merchantId}/";
 
         $username = 'merchant.'.$merchantId;
 
@@ -236,7 +241,8 @@ class GatewayService
 
     /**
      * Data format is: CART_X.X.X_DEV_X.X.X o e.g MAGENTO_2.0.2_CARTDEV_2.0.0
-     * where MAGENTO_2.0.2 represents Magento version 2.0.2 and CARTDEV_2.0.0 represents extension developer CARTDEV and extension version 2.0.0
+     * where MAGENTO_2.0.2 represents Magento version 2.0.2 and CARTDEV_2.0.0
+     * represents extension developer CARTDEV and extension version 2.0.0
      *
      * @return string
      */
@@ -411,9 +417,7 @@ class GatewayService
 
         $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode(array(
             'apiOperation' => 'PROCESS_ACS_RESULT',
-            '3DSecure'     => array(
-                'paRes' => $paRes,
-            ),
+            '3DSecure'     => array('paRes' => $paRes),
         )));
 
         $response = $this->client->sendRequest($request);
@@ -459,8 +463,6 @@ class GatewayService
      * @param string $orderId
      * @param array $session
      * @param array $order
-     *
-     * @deprecated
      */
     public function initiateAuthentication(
         $orderId,
@@ -552,13 +554,10 @@ class GatewayService
 
     /**
      * @param string $orderId
-     * @param array $session
+     * @param string $sessionId
      * @param array $order
      * @param array $authentication
-     * @param array $customer
-     * @param array $billing
-     * @param array $shipping
-     * @param array $shippingContact
+     * @param array $transaction
      *
      * @return mixed
      * @throws Exception

@@ -650,7 +650,10 @@ class Mastercard extends PaymentModule
                         'name'    => 'mpgs_hs_payment_action',
                         'options' => array(
                             'query' => array(
-                                array('id' => self::PAYMENT_ACTION_PAY, 'name' => $this->l('Purchase (Pay)')),
+                                array(
+                                    'id' => self::PAYMENT_ACTION_PAY,
+                                    'name' => $this->l('Purchase (Pay)')
+                                ),
                                 array(
                                     'id'   => self::PAYMENT_ACTION_AUTHCAPTURE,
                                     'name' => $this->l('Authorize & Capture'),
@@ -863,12 +866,20 @@ class Mastercard extends PaymentModule
             if (is_array($value)) {
                 continue;
             }
-            if (in_array($key,
-                ['mpgs_api_password', 'test_mpgs_api_password', 'mpgs_webhook_secret', 'test_mpgs_webhook_secret'])) {
+
+            $hiddenKeys = array(
+                'mpgs_api_password',
+                'test_mpgs_api_password',
+                'mpgs_webhook_secret',
+                'test_mpgs_webhook_secret'
+            );
+
+            if (in_array($key, $hiddenKeys)) {
                 if (!$value) {
                     continue;
                 }
             }
+
             Configuration::updateValue($key, $value);
         }
 
@@ -1265,11 +1276,11 @@ class Mastercard extends PaymentModule
 
 
     /**
-     * @param int $deltaCents
+     * @param float $deltaAmount
      *
      * @return array|null
      */
-    public function getOrderItems($deltaCents = 0)
+    public function getOrderItems($deltaAmount = 0.00)
     {
         if (!Configuration::get('mpgs_lineitems_enabled')) {
             return null;
@@ -1278,7 +1289,7 @@ class Mastercard extends PaymentModule
         $items = $this->context->cart->getProducts(false, false, $this->context->country->id, true);
         $cartItems = array();
 
-        $mustAddDelta = $deltaCents > 0;
+        $hasDelta = $deltaAmount > 0;
 
         /** @var Product $item */
         foreach ($items as $item) {
@@ -1288,9 +1299,10 @@ class Mastercard extends PaymentModule
                 'sku'       => GatewayService::safe($item['reference'], 127),
                 'unitPrice' => GatewayService::numeric($item['price_wt']),
             );
-            if ($mustAddDelta) {
-                $mustAddDelta = false;
-                $deltaPerItem = (ceil($deltaCents / $item['cart_quantity']) / 100);
+
+            if ($hasDelta && $item['cart_quantity']) {
+                $hasDelta = false;
+                $deltaPerItem = (ceil($deltaAmount / $item['cart_quantity']));
                 $catyItem['unitPrice'] = GatewayService::numeric($item['price_wt'] - $deltaPerItem);
             }
 
@@ -1301,12 +1313,12 @@ class Mastercard extends PaymentModule
     }
 
     /**
-     * @param int $deltaCents
+     * @param float $deltaAmount
      *
      * @return string|null
      * @throws Exception
      */
-    public function getShippingHandlingAmount($deltaCents = 0)
+    public function getShippingHandlingAmount($deltaAmount = 0)
     {
         if (!Configuration::get('mpgs_lineitems_enabled')) {
             return null;
@@ -1315,18 +1327,18 @@ class Mastercard extends PaymentModule
         $total = Context::getContext()->cart->getOrderTotal();
 
         return GatewayService::numeric(
-            $total - (float)$this->getItemAmount($deltaCents)
+            $total - (float)$this->getItemAmount($deltaAmount)
         );
     }
 
     /**
-     * @param int $deltaCents
+     * @param float $deltaAmount
      *
      * @return string|null
      */
-    public function getItemAmount($deltaCents = 0)
+    public function getItemAmount($deltaAmount = 0.00)
     {
-        $items = $this->getOrderItems($deltaCents);
+        $items = $this->getOrderItems($deltaAmount);
 
         if (!$items) {
             return null;
@@ -1370,7 +1382,7 @@ CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_refunds` (
     `refund_id` int(10) unsigned NOT NULL auto_increment,
     `order_id` int(10) unsigned NOT NULL,
     `order_slip_id` int(10) unsigned,
-    `total` float NOT NULL,
+    `total` decimal(20, 6) default 0.000000 NOT NULL,
     `transaction_id` varchar(255) NOT NULL,
      PRIMARY KEY  (`refund_id`)
 ) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;

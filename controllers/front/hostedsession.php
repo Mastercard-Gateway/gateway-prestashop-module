@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2020 Mastercard
+ * Copyright (c) 2019-2021 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,18 +151,17 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
      */
     protected function getOrderData()
     {
+        $deltaAmount = $this->getDeltaAmount();
+
         $currency = Context::getContext()->currency;
-
-        $deltaCents = $this->getDeltaCents();
-
         return array(
             'currency' => $currency->iso_code,
             'amount' => GatewayService::numeric(
                 Context::getContext()->cart->getOrderTotal()
             ),
-            'item' => $this->module->getOrderItems($deltaCents),
-            'itemAmount' => $this->module->getItemAmount($deltaCents),
-            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaCents),
+            'item' => $this->module->getOrderItems($deltaAmount),
+            'itemAmount' => $this->module->getItemAmount($deltaAmount),
+            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaAmount),
         );
     }
 }

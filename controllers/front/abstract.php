@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2020 Mastercard
+ * Copyright (c) 2019-2021 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -293,17 +293,42 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
     }
 
     /**
-     * @return int
+     * @return float
      */
-    protected function getDeltaCents()
+    protected function getDeltaAmount()
     {
         if (!Configuration::get('mpgs_lineitems_enabled')) {
-            return 0;
+            return 0.00;
         }
+
         $total = Context::getContext()->cart->getOrderTotal();
 
-        $delta = round(($this->module->getItemAmount() * 100) - ($total * 100));
+        $precision = $this->getCurrencyPrecision();
+        $cents = pow(10, $precision);
+        $delta = round(($this->module->getItemAmount() * $cents) - ($total * $cents));
+        $deltaAmount = $delta / $cents;
 
-        return max($delta, 0); // cents
+        return max($deltaAmount, 0.00);
+    }
+
+    /**
+     * Retrieves the value of the Current Currency Decimals (precision on the data level)
+     *
+     * @return int
+     */
+    protected function getCurrencyPrecision()
+    {
+        $defaultValue = 2;
+        $currency = Context::getContext()->currency;
+        if (!$currency) {
+            return $defaultValue;
+        }
+
+        $precision = $currency->precision;
+        if (!$precision || $precision <= 0) {
+            return $defaultValue;
+        }
+
+        return (int)$precision;
     }
 }
