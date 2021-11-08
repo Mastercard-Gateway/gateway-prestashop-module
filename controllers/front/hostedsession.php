@@ -42,7 +42,8 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             $this->_postProcess($cart, $customer);
 
             Tools::redirect(
-                'index.php?controller=order-confirmation&id_cart=' . (int)$cart->id . '&id_module=' . (int)$this->module->id . '&id_order=' . $this->module->currentOrder . '&key=' . $customer->secure_key
+                sprintf("index.php?controller=order-confirmation&id_cart=%d&id_module=%d&id_order=%s&key=%s",
+                    (int)$cart->id, (int)$this->module->id, $this->module->currentOrder, $customer->secure_key)
             );
 
         } catch (Exception $e) {

@@ -37,7 +37,8 @@ require_once(dirname(__FILE__).'/model/MpgsOrderSuffix.php');
 class Mastercard extends PaymentModule
 {
     const PAYMENT_CODE = 'MPGS';
-    const MPGS_API_VERSION = '58';
+    const MPGS_API_VERSION = '61';
+    const MPGS_3DS_LIB_VERSION = '1.3.0';
 
     const PAYMENT_ACTION_PAY = 'PAY';
     const PAYMENT_ACTION_AUTHCAPTURE = 'AUTHCAPTURE';
@@ -91,11 +92,6 @@ class Mastercard extends PaymentModule
         $this->controllerAdmin = 'AdminMpgs';
         $this->displayName = $this->l('Mastercard Payment Gateway Services');
         $this->description = $this->l('Mastercard Payment Gateway Services module for Prestashop');
-
-//        $this->limited_countries = array('FR');
-//        $this->limited_currencies = array('EUR');
-//        $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false).'&configure='.$this->name.'&tab_module='.$this->tab.'&module_name='.$this->name;
-//        $helper->token = Tools::getAdminTokenLite('AdminModules');
     }
 
     /**
@@ -114,6 +110,14 @@ class Mastercard extends PaymentModule
     public static function getApiVersion()
     {
         return self::MPGS_API_VERSION;
+    }
+
+    /**
+     * @return string
+     */
+    public static function get3DSLibVersion()
+    {
+        return self::MPGS_3DS_LIB_VERSION;
     }
 
     /**
@@ -159,9 +163,6 @@ class Mastercard extends PaymentModule
     {
         Configuration::deleteByName('mpgs_hc_title');
         Configuration::deleteByName('mpgs_hs_title');
-
-//        Configuration::deleteByName('MPGS_OS_PAYMENT_WAITING');
-//        Configuration::deleteByName('MPGS_OS_AUTHORIZED');
 
         $this->unregisterHook('paymentOptions');
         $this->unregisterHook('displayBackOfficeOrderActions');
@@ -570,11 +571,13 @@ class Mastercard extends PaymentModule
                         'name'    => 'mpgs_hc_payment_action',
                         'options' => array(
                             'query' => array(
-                                array('id'   => self::PAYMENT_CHECKOUT_SESSION_PURCHASE,
-                                      'name' => $this->l('Purchase (Pay)'),
+                                array(
+                                    'id'   => self::PAYMENT_CHECKOUT_SESSION_PURCHASE,
+                                    'name' => $this->l('Purchase (Pay)'),
                                 ),
-                                array('id'   => self::PAYMENT_CHECKOUT_SESSION_AUTHORIZE,
-                                      'name' => $this->l('Authorize & Capture'),
+                                array(
+                                    'id'   => self::PAYMENT_CHECKOUT_SESSION_AUTHORIZE,
+                                    'name' => $this->l('Authorize & Capture'),
                                 ),
                             ),
                             'id'    => 'id',
@@ -647,9 +650,13 @@ class Mastercard extends PaymentModule
                         'name'    => 'mpgs_hs_payment_action',
                         'options' => array(
                             'query' => array(
-                                array('id' => self::PAYMENT_ACTION_PAY, 'name' => $this->l('Purchase (Pay)')),
-                                array('id'   => self::PAYMENT_ACTION_AUTHCAPTURE,
-                                      'name' => $this->l('Authorize & Capture'),
+                                array(
+                                    'id' => self::PAYMENT_ACTION_PAY,
+                                    'name' => $this->l('Purchase (Pay)')
+                                ),
+                                array(
+                                    'id'   => self::PAYMENT_ACTION_AUTHCAPTURE,
+                                    'name' => $this->l('Authorize & Capture'),
                                 ),
                             ),
                             'id'    => 'id',
@@ -859,12 +866,20 @@ class Mastercard extends PaymentModule
             if (is_array($value)) {
                 continue;
             }
-            if (in_array($key,
-                ['mpgs_api_password', 'test_mpgs_api_password', 'mpgs_webhook_secret', 'test_mpgs_webhook_secret'])) {
+
+            $hiddenKeys = array(
+                'mpgs_api_password',
+                'test_mpgs_api_password',
+                'mpgs_webhook_secret',
+                'test_mpgs_webhook_secret'
+            );
+
+            if (in_array($key, $hiddenKeys)) {
                 if (!$value) {
                     continue;
                 }
             }
+
             Configuration::updateValue($key, $value);
         }
 
@@ -1112,7 +1127,8 @@ class Mastercard extends PaymentModule
         $this->context->smarty->assign(array(
             'hostedsession_action_url'    => $this->context->link->getModuleLink($this->name, 'hostedsession', array(),
                 true),
-            'hostedsession_component_url' => $this->getHostedSessionJsComponent(),
+            'hostedsession_component_url' => $this->getHostedSessionJsComponentUrl(),
+            'hostedsession_3ds_url'       => $this->getHostedSession3DSUrl(),
             'hostedsession_3ds'           => Configuration::get('mpgs_hs_3ds'),
         ));
 
@@ -1172,13 +1188,24 @@ class Mastercard extends PaymentModule
      * @throws Exception
      * https://mtf.gateway.mastercard.com/form/version/50/merchant/<MERCHANTID>/session.js
      */
-    public function getHostedSessionJsComponent()
+    public function getHostedSessionJsComponentUrl()
     {
         $cacheBust = (int)round(microtime(true));
 
         return 'https://'.$this->getApiEndpoint().'/form/version/'.$this->getApiVersion().'/merchant/'.$this->getConfigValue('mpgs_merchant_id').'/session.js?_='.$cacheBust;
     }
 
+    /**
+     * @return string
+     * @throws Exception
+     * https://mtf.gateway.mastercard.com/form/version/50/merchant/<MERCHANTID>/session.js
+     */
+    public function getHostedSession3DSUrl()
+    {
+        $cacheBust = (int)round(microtime(true));
+
+        return 'https://'.$this->getApiEndpoint().'/static/threeDS/'.$this->get3DSLibVersion().'/three-ds.min.js?_='.$cacheBust;
+    }
 
     /**
      * @return string

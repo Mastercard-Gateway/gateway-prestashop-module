@@ -27,7 +27,8 @@
         var resultIndicator = null;
         var baseUrl = "{$urls.current_url nofilter}";
 
-        // This method preserves the current state of successIndicator and orderId, so they're not overwritten when we return to this page after redirect
+        // This method preserves the current state of successIndicator and orderId,
+        // so they're not overwritten when we return to this page after redirect
         function beforeRedirect() {
             return {
                 successIndicator: successIndicator,
@@ -75,8 +76,6 @@
             // Save the resultIndicator
             resultIndicator = _resultIndicator;
             var result = (resultIndicator === successIndicator) ? "SUCCESS" : "ERROR";
-
-            // alert('completeCallback ' + baseUrl + '&order_id=' + orderId + '&result=' + result);
             window.location.href = baseUrl + '&order_id=' + orderId + '&result=' + result;
         }
 

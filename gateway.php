@@ -54,6 +54,7 @@ class ApiErrorPlugin implements Plugin
     /**
      * @param RequestInterface $request
      * @param ResponseInterface $response
+     *
      * @return ResponseInterface
      */
     protected function transformResponseToException(RequestInterface $request, ResponseInterface $response)
@@ -66,7 +67,7 @@ class ApiErrorPlugin implements Plugin
 
             $msg = '';
             if (isset($responseData['error']['cause'])) {
-                $msg .= $responseData['error']['cause'] . ': ';
+                $msg .= $responseData['error']['cause'].': ';
             }
             if (isset($responseData['error']['explanation'])) {
                 $msg .= $responseData['error']['explanation'];
@@ -113,7 +114,8 @@ class ApiLoggerPlugin implements Plugin
             $reqBody = $request->getBody();
         }
 
-        $this->logger->info(sprintf('Emit request: "%s"', $this->formatter->formatRequest($request)), ['request' => $reqBody]);
+        $this->logger->info(sprintf('Emit request: "%s"', $this->formatter->formatRequest($request)),
+            ['request' => $reqBody]);
 
         return $next($request)->then(function (ResponseInterface $response) use ($request) {
             $body = @json_decode($response->getBody(), true);
@@ -121,7 +123,8 @@ class ApiLoggerPlugin implements Plugin
                 $body = $response->getBody();
             }
             $this->logger->info(
-                sprintf('Receive response: "%s" for request: "%s"', $this->formatter->formatResponse($response), $this->formatter->formatRequest($request)),
+                sprintf('Receive response: "%s" for request: "%s"', $this->formatter->formatResponse($response),
+                    $this->formatter->formatRequest($request)),
                 [
                     'response' => $body,
                 ]
@@ -131,18 +134,21 @@ class ApiLoggerPlugin implements Plugin
         }, function (\Exception $exception) use ($request) {
             if ($exception instanceof Exception\HttpException) {
                 $this->logger->error(
-                    sprintf('Error: "%s" with response: "%s" when emitting request: "%s"', $exception->getMessage(), $this->formatter->formatResponse($exception->getResponse()), $this->formatter->formatRequest($request)),
+                    sprintf('Error: "%s" with response: "%s" when emitting request: "%s"', $exception->getMessage(),
+                        $this->formatter->formatResponse($exception->getResponse()),
+                        $this->formatter->formatRequest($request)),
                     [
-                        'request' => $request,
-                        'response' => $exception->getResponse(),
+                        'request'   => $request,
+                        'response'  => $exception->getResponse(),
                         'exception' => $exception,
                     ]
                 );
             } else {
                 $this->logger->error(
-                    sprintf('Error: "%s" when emitting request: "%s"', $exception->getMessage(), $this->formatter->formatRequest($request)),
+                    sprintf('Error: "%s" when emitting request: "%s"', $exception->getMessage(),
+                        $this->formatter->formatRequest($request)),
                     [
-                        'request' => $request,
+                        'request'   => $request,
                         'exception' => $exception,
                     ]
                 );
@@ -154,7 +160,8 @@ class ApiLoggerPlugin implements Plugin
 }
 
 
-class GatewayResponseException extends \Exception {
+class GatewayResponseException extends \Exception
+{
 
 }
 
@@ -182,15 +189,22 @@ class GatewayService
 
     /**
      * GatewayService constructor.
+     *
      * @param string $baseUrl
      * @param string $apiVersion
      * @param string $merchantId
      * @param string $password
      * @param string $webhookUrl
+     *
      * @throws \Exception
      */
-    public function __construct($baseUrl, $apiVersion, $merchantId, $password, $webhookUrl)
-    {
+    public function __construct(
+        $baseUrl,
+        $apiVersion,
+        $merchantId,
+        $password,
+        $webhookUrl
+    ) {
         $this->webhookUrl = $webhookUrl;
 
         $logger = new Logger('mastercard');
@@ -201,7 +215,7 @@ class GatewayService
 
         $this->messageFactory = new GuzzleMessageFactory();
 
-        $this->apiUrl = 'https://' . $baseUrl . '/api/rest/version/' . $apiVersion . '/merchant/' . $merchantId . '/';
+        $this->apiUrl = "https://{$baseUrl}/api/rest/version/{$apiVersion}/merchant/{$merchantId}/";
 
         $username = 'merchant.'.$merchantId;
 
@@ -227,7 +241,8 @@ class GatewayService
 
     /**
      * Data format is: CART_X.X.X_DEV_X.X.X o e.g MAGENTO_2.0.2_CARTDEV_2.0.0
-     * where MAGENTO_2.0.2 represents Magento version 2.0.2 and CARTDEV_2.0.0 represents extension developer CARTDEV and extension version 2.0.0
+     * where MAGENTO_2.0.2 represents Magento version 2.0.2 and CARTDEV_2.0.0
+     * represents extension developer CARTDEV and extension version 2.0.0
      *
      * @return string
      */
@@ -239,6 +254,7 @@ class GatewayService
     /**
      * @param $value
      * @param int $limited
+     *
      * @return bool|string|null
      */
     public static function safe($value, $limited = 0)
@@ -258,6 +274,7 @@ class GatewayService
      * @param string $class
      * @param string $property
      * @param int $limited
+     *
      * @return bool|string|null
      */
     public static function safeProperty($class, $property, $limited = 0)
@@ -265,11 +282,13 @@ class GatewayService
         if (!property_exists($class, $property)) {
             return null;
         }
+
         return static::safe($class->{$property}, $limited);
     }
 
     /**
      * @param mixed $value
+     *
      * @return string
      */
     public static function numeric($value)
@@ -279,6 +298,7 @@ class GatewayService
 
     /**
      * @param array $data
+     *
      * @throws GatewayResponseException
      */
     public function validateInitiateAuthenticationResponse($data)
@@ -294,6 +314,7 @@ class GatewayService
 
     /**
      * @param array $data
+     *
      * @throws GatewayResponseException
      */
     public function validateAuthenticatePayerResponse($data)
@@ -309,7 +330,8 @@ class GatewayService
     }
 
     /**
-     * @param $data
+     * @param array $data
+     *
      * @throws GatewayResponseException
      */
     public function validateCheckoutSessionResponse($data)
@@ -320,6 +342,18 @@ class GatewayService
 
         if (!isset($data['session']) || !isset($data['session']['id'])) {
             throw new GatewayResponseException('Missing session or ID.');
+        }
+    }
+
+    /**
+     * @param array $data
+     *
+     * @throws GatewayResponseException
+     */
+    public function validateHostedSessionUpdateResponse($data)
+    {
+        if (!isset($data['session']) || $data['session']['updateStatus'] !== 'SUCCESS') {
+            throw new GatewayResponseException('Failed to update Hosted Session.');
         }
     }
 
@@ -349,6 +383,7 @@ class GatewayService
 
     /**
      * @param $response
+     *
      * @return bool
      */
     public function isApproved($response)
@@ -372,18 +407,17 @@ class GatewayService
      *
      * @param string $threeDSecureId
      * @param string $paRes
+     *
      * @return mixed|ResponseInterface
      * @throws Exception
      */
     public function process3dsResult($threeDSecureId, $paRes)
     {
-        $uri = $this->apiUrl . '3DSecureId/' . $threeDSecureId;
+        $uri = $this->apiUrl.'3DSecureId/'.$threeDSecureId;
 
         $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode(array(
             'apiOperation' => 'PROCESS_ACS_RESULT',
-            '3DSecure' => array(
-                'paRes' => $paRes
-            )
+            '3DSecure'     => array('paRes' => $paRes),
         )));
 
         $response = $this->client->sendRequest($request);
@@ -399,19 +433,20 @@ class GatewayService
      * @param array $data
      * @param array $order
      * @param array $session
+     *
      * @return mixed|ResponseInterface
      * @throws Exception
      */
     public function check3dsEnrollment($data, $order, $session)
     {
         $threeDSecureId = uniqid('3DS-', true);
-        $uri = $this->apiUrl . '3DSecureId/' . $threeDSecureId;
+        $uri = $this->apiUrl.'3DSecureId/'.$threeDSecureId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
             'apiOperation' => 'CHECK_3DS_ENROLLMENT',
-            '3DSecure' => $data,
-            'order' => $order,
-            'session' => $session,
+            '3DSecure'     => $data,
+            'order'        => $order,
+            'session'      => $session,
         )));
 
         $response = $this->client->sendRequest($request);
@@ -424,6 +459,7 @@ class GatewayService
      * Create initiate authentication
      *
      * @see https://test-gateway.mastercard.com/api/documentation/apiDocumentation/rest-json/version/latest/operation/Authentication%3a%20%20Initiate%20Authentication.html?locale=en_US
+     *
      * @param string $orderId
      * @param array $session
      * @param array $order
@@ -433,22 +469,22 @@ class GatewayService
         $session,
         $order
     ) {
-        $txnId = uniqid($orderId . '-', true);
-        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
+        $txnId = uniqid($orderId.'-', true);
+        $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$txnId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
-            'apiOperation' => 'INITIATE_AUTHENTICATION',
+            'apiOperation'   => 'INITIATE_AUTHENTICATION',
             'authentication' => [
                 'acceptVersions' => '3DS1,3DS2',
-                'channel' => 'PAYER_BROWSER',
-                'purpose' => 'PAYMENT_TRANSACTION'
+                'channel'        => 'PAYER_BROWSER',
+                'purpose'        => 'PAYMENT_TRANSACTION',
             ],
-            'session' => $session,
-            'order' => array_merge($order, array(
-                'reference' => $orderId
+            'session'        => $session,
+            'order'          => array_merge($order, array(
+                'reference' => $orderId,
             )),
-            'transaction' => array(
-                'reference' => $txnId
+            'transaction'    => array(
+                'reference' => $txnId,
             ),
         )));
 
@@ -458,13 +494,13 @@ class GatewayService
         $this->validateInitiateAuthenticationResponse($response);
 
         return $response;
-
     }
 
     /**
      * Authenticate Payer
      *
      * @see https://test-gateway.mastercard.com/api/documentation/apiDocumentation/rest-json/version/latest/operation/Authentication%3a%20%20Initiate%20Authentication.html?locale=en_US
+     *
      * @param string $orderId
      * @param array $session
      * @param array $order
@@ -488,24 +524,24 @@ class GatewayService
         $shipping = array(),
         $shippingContact = array()
     ) {
-        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
+        $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$txnId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
-            'apiOperation' => 'AUTHENTICATE_PAYER',
+            'apiOperation'   => 'AUTHENTICATE_PAYER',
             'authentication' => [
-                'redirectResponseUrl' => $responseUrl
+                'redirectResponseUrl' => $responseUrl,
             ],
-            'device' => $device,
-            'session' => $session,
-            'order' => $order,
-            'billing' => array(
-                'address' => $billing
+            'device'         => $device,
+            'session'        => $session,
+            'order'          => $order,
+            'billing'        => array(
+                'address' => $billing,
             ),
-            'shipping' => array(
+            'shipping'       => array(
                 'address' => $shipping,
                 'contact' => $shippingContact,
             ),
-            'customer' => $customer,
+            'customer'       => $customer,
         )));
 
         $response = $this->client->sendRequest($request);
@@ -514,7 +550,50 @@ class GatewayService
         $this->validateAuthenticatePayerResponse($response);
 
         return $response;
+    }
 
+    /**
+     * @param string $orderId
+     * @param string $sessionId
+     * @param array $order
+     * @param array $authentication
+     * @param array $transaction
+     *
+     * @return mixed
+     * @throws Exception
+     * @throws GatewayResponseException
+     */
+    public function updateSession(
+        string $orderId,
+        string $sessionId,
+        $order,
+        $authentication = array(),
+        $transaction = array()
+    ) {
+        $uri = $this->apiUrl.'session/'.$sessionId;
+
+        $requestData = array(
+            'partnerSolutionId' => $this->getSolutionId(),
+            'order'             => array_merge($order, array(
+                'id' => $orderId,
+            )),
+        );
+
+        if (!empty($transaction)) {
+            $requestData['transaction'] = $transaction;
+        }
+
+        if (!empty($authentication)) {
+            $requestData['authentication'] = $authentication;
+        }
+
+        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode($requestData));
+        $response = $this->client->sendRequest($request);
+        $response = json_decode($response->getBody(), true);
+
+        $this->validateHostedSessionUpdateResponse($response);
+
+        return $response;
     }
 
     /**
@@ -530,6 +609,7 @@ class GatewayService
      * @param array $billing
      * @param array $shipping
      * @param array $shippingContact
+     *
      * @return array
      * @throws Exception
      * @throws GatewayResponseException
@@ -543,25 +623,25 @@ class GatewayService
         $shippingContact = array()
     ) {
         $txnId = uniqid(sprintf('%s-', $order['id']));
-        $uri = $this->apiUrl . 'session';
+        $uri = $this->apiUrl.'session';
 
         $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode(array(
-            'apiOperation' => 'CREATE_CHECKOUT_SESSION',
+            'apiOperation'      => 'CREATE_CHECKOUT_SESSION',
             'partnerSolutionId' => $this->getSolutionId(),
-            'order' => array_merge($order, array(
-                'notificationUrl' => $this->webhookUrl
+            'order'             => array_merge($order, array(
+                'notificationUrl' => $this->webhookUrl,
             )),
-            'billing' => array(
-                'address' => $billing
+            'billing'           => array(
+                'address' => $billing,
             ),
-            'shipping' => array(
+            'shipping'          => array(
                 'address' => $shipping,
-                'contact' => $shippingContact
+                'contact' => $shippingContact,
             ),
-            'interaction' => $interaction,
-            'customer' => $customer,
-            'transaction' => array(
-                'reference' => $txnId
+            'interaction'       => $interaction,
+            'customer'          => $customer,
+            'transaction'       => array(
+                'reference' => $txnId,
             ),
         )));
 
@@ -589,6 +669,7 @@ class GatewayService
      * @param array $shippingContact
      * @param array $authentication
      * @param string $threeDSVersion
+     *
      * @return mixed|ResponseInterface
      * @throws Exception
      */
@@ -605,35 +686,35 @@ class GatewayService
         $threeDSVersion = '1'
     ) {
         $txnId = uniqid(sprintf('%s-', $orderId));
-        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
+        $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$txnId;
 
         $body = array(
-            'apiOperation' => 'AUTHORIZE',
+            'apiOperation'      => 'AUTHORIZE',
             'partnerSolutionId' => $this->getSolutionId(),
-            'order' => array_merge($order, array(
+            'order'             => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl,
-                'reference' => $orderId
+                'reference'       => $orderId,
             )),
-            'billing' => array(
-                'address' => $billing
+            'billing'           => array(
+                'address' => $billing,
             ),
-            'shipping' => array(
+            'shipping'          => array(
                 'address' => $shipping,
                 'contact' => $shippingContact,
             ),
-            'customer' => $customer,
-            'sourceOfFunds' => array(
-                'type' => 'CARD'
+            'customer'          => $customer,
+            'sourceOfFunds'     => array(
+                'type' => 'CARD',
             ),
-            'session' => $session,
-            'transaction' => array(
-                'reference' => $txnId
+            'session'           => $session,
+            'transaction'       => array(
+                'reference' => $txnId,
             ),
         );
 
         if ($threeDSVersion == 1) {
             $body['3DSecureId'] = $threeDSecureId;
-        } else if ($threeDSVersion == 2) {
+        } elseif ($threeDSVersion == 2) {
             $body['authentication'] = $authentication;
         }
 
@@ -666,6 +747,7 @@ class GatewayService
      * @param array $shippingContact
      * @param array $authentication
      * @param string $threeDSVersion
+     *
      * @return mixed|ResponseInterface
      * @throws Exception
      */
@@ -682,35 +764,35 @@ class GatewayService
         $threeDSVersion = '1'
     ) {
         $txnId = uniqid(sprintf('%s-', $orderId));
-        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
+        $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$txnId;
 
         $body = array(
-            'apiOperation' => 'PAY',
+            'apiOperation'      => 'PAY',
             'partnerSolutionId' => $this->getSolutionId(),
-            'order' => array_merge($order, array(
+            'order'             => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl,
-                'reference' => $orderId
+                'reference'       => $orderId,
             )),
-            'billing' => array(
-                'address' => $billing
+            'billing'           => array(
+                'address' => $billing,
             ),
-            'shipping' => array(
+            'shipping'          => array(
                 'address' => $shipping,
-                'contact' => $shippingContact
+                'contact' => $shippingContact,
             ),
-            'customer' => $customer,
-            'sourceOfFunds' => array(
-                'type' => 'CARD'
+            'customer'          => $customer,
+            'sourceOfFunds'     => array(
+                'type' => 'CARD',
             ),
-            'session' => $session,
-            'transaction' => array(
-                'reference' => $txnId
+            'session'           => $session,
+            'transaction'       => array(
+                'reference' => $txnId,
             ),
         );
 
         if ($threeDSVersion == 1) {
             $body['3DSecureId'] = $threeDSecureId;
-        } else if ($threeDSVersion == 2) {
+        } elseif ($threeDSVersion == 2) {
             $body['authentication'] = $authentication;
         }
 
@@ -730,12 +812,13 @@ class GatewayService
      * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/order/{orderid}
      *
      * @param string $orderId
+     *
      * @return array
      * @throws \Http\Client\Exception
      */
     public function retrieveOrder($orderId)
     {
-        $uri = $this->apiUrl . 'order/' . $orderId;
+        $uri = $this->apiUrl.'order/'.$orderId;
 
         $request = $this->messageFactory->createRequest('GET', $uri);
         $response = $this->client->sendRequest($request);
@@ -752,6 +835,7 @@ class GatewayService
      *
      * @param string $orderId
      * @param array $response
+     *
      * @return null|array
      * @throws Exception
      */
@@ -776,6 +860,7 @@ class GatewayService
      *
      * @param string $orderId
      * @param array $response
+     *
      * @return null|array
      * @throws Exception
      */
@@ -801,12 +886,13 @@ class GatewayService
      *
      * @param string $orderId
      * @param string $txnId
+     *
      * @return array
      * @throws Exception
      */
     public function retrieveTransaction($orderId, $txnId)
     {
-        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $txnId;
+        $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$txnId;
 
         $request = $this->messageFactory->createRequest('GET', $uri);
         $response = $this->client->sendRequest($request);
@@ -825,21 +911,22 @@ class GatewayService
      *
      * @param string $orderId
      * @param string $txnId
+     *
      * @return mixed|\Psr\Http\Message\ResponseInterface
      * @throws Exception
      */
     public function voidTxn($orderId, $txnId)
     {
-        $newTxnId = 'void-' . $txnId;
-        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $newTxnId;
+        $newTxnId = 'void-'.$txnId;
+        $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$newTxnId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
-            'apiOperation' => 'VOID',
+            'apiOperation'      => 'VOID',
             'partnerSolutionId' => $this->getSolutionId(),
-            'transaction' => array(
+            'transaction'       => array(
                 'targetTransactionId' => $txnId,
-                'reference' => $txnId,
-            )
+                'reference'           => $txnId,
+            ),
         )));
         $response = $this->client->sendRequest($request);
 
@@ -863,26 +950,27 @@ class GatewayService
      * @param string $txnId
      * @param $amount
      * @param $currency
+     *
      * @return mixed|ResponseInterface
      * @throws Exception
      */
     public function captureTxn($orderId, $txnId, $amount, $currency)
     {
-        $newTxnId = 'capture-' . $txnId;
-        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $newTxnId;
+        $newTxnId = 'capture-'.$txnId;
+        $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$newTxnId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
-            'apiOperation' => 'CAPTURE',
+            'apiOperation'      => 'CAPTURE',
             'partnerSolutionId' => $this->getSolutionId(),
-            'transaction' => array(
-                'amount' => $amount,
-                'currency' => $currency,
+            'transaction'       => array(
+                'amount'    => $amount,
+                'currency'  => $currency,
                 'reference' => $newTxnId,
             ),
-            'order' => array(
+            'order'             => array(
                 'notificationUrl' => $this->webhookUrl,
-                'reference' => $orderId,
-            )
+                'reference'       => $orderId,
+            ),
         )));
 
         $response = $this->client->sendRequest($request);
@@ -906,26 +994,27 @@ class GatewayService
      * @param $txnId
      * @param $amount
      * @param $currency
+     *
      * @return mixed|ResponseInterface
      * @throws Exception
      */
     public function refund($orderId, $txnId, $amount, $currency)
     {
-        $newTxnId = 'refund-' . $txnId;
-        $uri = $this->apiUrl . 'order/' . $orderId . '/transaction/' . $newTxnId;
+        $newTxnId = 'refund-'.$txnId;
+        $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$newTxnId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
-            'apiOperation' => 'REFUND',
+            'apiOperation'      => 'REFUND',
             'partnerSolutionId' => $this->getSolutionId(),
-            'transaction' => array(
-                'amount' => $amount,
-                'currency' => $currency,
+            'transaction'       => array(
+                'amount'    => $amount,
+                'currency'  => $currency,
                 'reference' => $newTxnId,
             ),
-            'order' => array(
+            'order'             => array(
                 'notificationUrl' => $this->webhookUrl,
-                'reference' => $orderId,
-            )
+                'reference'       => $orderId,
+            ),
         )));
 
         $response = $this->client->sendRequest($request);
@@ -937,12 +1026,14 @@ class GatewayService
     }
 
     /**
-     * Request to retrieve the options available for processing a payment, for example, the credit cards and currencies.
+     * Request to retrieve the options available for processing a payment, for example,
+     * the credit cards and currencies.
+     *
      * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/paymentOptionsInquiry
      */
     public function paymentOptionsInquiry()
     {
-        $uri = $this->apiUrl . 'paymentOptionsInquiry';
+        $uri = $this->apiUrl.'paymentOptionsInquiry';
 
         $request = $this->messageFactory->createRequest('GET', $uri);
         $response = $this->client->sendRequest($request);
