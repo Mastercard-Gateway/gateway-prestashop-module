@@ -17,7 +17,7 @@ and with PHP versions:
 
 ## Obtain the module
 
-You can obtain the module by downloading a release from: [https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases](https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases) - the module is licensed using  [OSL 3.0](https://opensource.org/licenses/OSL-3.0).
+You can obtain the module by downloading a release from: [https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases](https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases) - the module is licensed using [Apache License, Version 2.0](https://opensource.org/licenses/Apache-2.0).
 
 ## Installation in PrestaShop
 
