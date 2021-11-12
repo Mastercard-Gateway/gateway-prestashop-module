@@ -8,6 +8,7 @@ The module has been tested with the PrestaShop versions:
 - 1.7.5.2
 - 1.7.6.2
 - 1.7.6.4
+- 1.7.7.7
 
 and with PHP versions:
 - 7.1
@@ -62,21 +63,22 @@ The Hosted Checkout model allows you to collect payment details from your payer 
 
 Below are list of Hosted Checkout method configuration which you will find in the administration interface:
 
-![](docs/images/hosted_checkout_method.png)
+![](docs/images/hosted_checkout_settings.png)
 
 |Name|Description  |
 |--|--|
 |Enabled | Two Options are available: <br> **YES** - to enable this payment method for Mastercard Payment Gateway Module <br> **NO** - to disable this payment method |
 |Title |Text mentioned here will be appear on front-end checkout page / payment method section. |
-| Theme| Leave blank unless indicated by your payment provider. |
+|Theme| Leave blank unless indicated by your payment provider. |
+|Payment Model|Select any One option from below: <br>**Purchase**  - Fund will be transferred to merchant account as soon as user’s entered card details has been successfully verified and order is placed. <br>**Authorize & Capture**  - 2 stage process; where once order will place, it will only authorize user’s card details. Payment amount need to be captured manually by merchant. |
 |Order Summary display |Select any One option from below: <br>**Hide**  - to not display any order and card details to user before submitting order <br> **Show**  - to display order and entered card details to user before submitting order <br> **Show (without payment details)**  - to display only order details to user before submitting order |
 
 ## Hosted Session integration
 Choose the Hosted Session model if you want control over the layout and styling of your payment page. The Hosted Session JavaScript client library enables you to collect sensitive payment details from the payer in payment form fields, sourced from and controlled by Mastercard Payment Gateway. The gateway collects the payment details in a payment session and temporarily stores them for later use. You can then include a payment session in place of payment details in the transaction request to process a payment.
 
-<img src="docs/images/hosted_session_payment.png" alt="session payment" width="600"/>
+![](docs/images/hosted_session_payment.png)
 
-There are two different payment flow methods under Hosted session integration:
+There are two different payment flow methods under Hosted Session integration:
 
 1.  **Purchase (Pay)**  
     If Purchase has been selected for Payment Model, then transaction will be done automatically. After user has entered card detail and submit order, amount of total order will be deducted from user’s card and will be automatically transferred to merchant’s account. It may take some time for reflecting amount into merchant’s account, but the process will be automatic.
@@ -92,7 +94,7 @@ Below is list of all configuration options you will see under Hosted Session pay
 | Enabled | Two Options are available: <br>**YES**  - to enable this payment method for Mastercard Payment Gateway Module <br>**NO**  - to disable this payment method |
 |Title|Text mentioned here will be appear on front-end checkout page / payment method section|
 |Payment Model|Select any One option from below: <br>**Purchase**  - Fund will be transferred to merchant account as soon as user’s entered card details has been successfully verified and order is placed. <br>**Authorize & Capture**  - 2 stage process; where once order will place, it will only authorize user’s card details. Payment amount need to be captured manually by merchant. |
-|3D Secure |Two Options are available: <br> **YES**  - After the payer has entered their card details, they will be redirected to the their bank's authentication service for verification. <br> **NO**  - After placing order and entered card details has been verified, the order will be placed. |
+|3D Secure |Two Options are available: <br> **Disabled**  - After placing the order and entering card details have been verified, the order will be placed. <br> **3DS** - After the payer has entered their card details, they will be redirected to their bank's authentication service for verification using the 3DS 1.0 method. <br> **EMV 3DS (3DS2)**  - After the payer has entered their card details, they will be redirected to their bank's authentication service for verification using the 3DS 2.0 method. |
 
 ## Back-office Operations
 If Authorize & Capture payment method has been selected, then Funds need to be captured or refund manually.
