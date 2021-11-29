@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2020 Mastercard
+ * Copyright (c) 2019-2021 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,8 +73,8 @@ class MastercardWebhookModuleFrontController extends ModuleFrontController
             return;
         }
 
-        $webhoolSecret = $this->module->getConfigValue('mpgs_webhook_secret');
-        if (!$webhoolSecret || $webhoolSecret !== $headers[self::HEADER_WEBHOOK_SECRET]) {
+        $webhookSecret = $this->module->getConfigValue('mpgs_webhook_secret');
+        if (!$webhookSecret || $webhookSecret !== $headers[self::HEADER_WEBHOOK_SECRET]) {
             $this->logger->critical('Invalid or missing webhook secret', array(
                 'environment' => $_SERVER
             ));

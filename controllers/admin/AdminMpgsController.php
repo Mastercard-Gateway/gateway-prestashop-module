@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2020 Mastercard
+ * Copyright (c) 2019-2021 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 require_once(dirname(__FILE__) . '/../../vendor/autoload.php');
 require_once(dirname(__FILE__) . '/../../gateway.php');
 require_once(dirname(__FILE__) . '/../../handlers.php');
+require_once(dirname(__FILE__) . '/../../service/MpgsRefundService.php');
 
 class AdminMpgsController extends ModuleAdminController
 {
@@ -144,26 +145,18 @@ class AdminMpgsController extends ModuleAdminController
      */
     protected function refundAction($order)
     {
-        $txnData = $this->client->getCaptureTransaction($this->module->getOrderRef($order));
-        $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
+        $refundService = new MpgsRefundService($this->module);
 
-        if (!$txn) {
-            throw new Exception('Capture/Pay transaction not found.');
-        }
-
-        $currency = Currency::getCurrency($txn->id_currency);
-
-        $response = $this->client->refund(
-            $this->module->getOrderRef($order),
-            $txn->transaction_id,
-            $txn->amount,
-            $currency['iso_code']
-        );
-
-        $processor = new ResponseProcessor($this->module);
-        $processor->handle($order, $response, array(
-            new RefundResponseHandler(),
+        $response = $refundService->execute($order, array(
+            new TransactionResponseHandler(),
             new TransactionStatusResponseHandler(),
         ));
+
+        $refund = new MpgsRefund();
+
+        $refund->order_id = $order->id;
+        $refund->total = $response['transaction']['amount'];
+        $refund->transaction_id = $response['transaction']['id'];
+        $refund->add();
     }
 }

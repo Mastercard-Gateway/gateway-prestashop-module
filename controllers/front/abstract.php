@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2020 Mastercard
+ * Copyright (c) 2019-2021 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 
 abstract class MastercardAbstractModuleFrontController extends ModuleFrontController
 {
+    const PAYMENT_DECLINED_ERROR = 'Your payment was declined.';
+
     /**
      * @var GatewayService
      */
@@ -32,6 +34,11 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
      * @var array
      */
     public $threeDSecureData;
+
+    /**
+     * @var string
+     */
+    public $threeDSecureId;
 
     /**
      * @throws PrestaShopException
@@ -78,57 +85,125 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
         if (Tools::getValue('process_acs_result') === "1") {
             $paRes = Tools::getValue('PaRes');
-            $threeDSecureId = Tools::getValue('3DSecureId');
+            $this->threeDSecureId = Tools::getValue('3DSecureId');
 
-            if (!$paRes || !$threeDSecureId) {
+            if (!$paRes || !$this->threeDSecureId) {
                 $this->errors[] = $this->module->l('Payment error occurred (3D Secure).', 'abstract');
-                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
-                    'action' => 'show'
-                )));
+                $this->redirectWithNotifications(
+                    Context::getContext()->link->getPageLink(
+                        'order',
+                        true,
+                        null,
+                        array(
+                            'action' => 'show',
+                        )
+                    )
+                );
                 exit;
             }
 
-            $response = $this->client->process3dsResult($threeDSecureId, $paRes);
+            $response = $this->client->process3dsResult($this->threeDSecureId, $paRes);
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
                 $this->errors[] = $this->module->l('Your payment was declined by 3D Secure.', 'abstract');
-                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
-                    'action' => 'show'
-                )));
+                $this->redirectWithNotifications(
+                    Context::getContext()->link->getPageLink(
+                        'order',
+                        true,
+                        null,
+                        array(
+                            'action' => 'show',
+                        ),
+                        true
+                    )
+                );
                 exit;
             }
 
             $this->threeDSecureData = array(
-                'acsEci' => $response['3DSecure']['acsEci'],
+                'acsEci'              => $response['3DSecure']['acsEci'],
                 'authenticationToken' => $response['3DSecure']['authenticationToken'],
-                'paResStatus' => $response['3DSecure']['paResStatus'],
-                'veResEnrolled' => $response['3DSecure']['veResEnrolled'],
-                'xid' => $response['3DSecure']['xid'],
+                'paResStatus'         => $response['3DSecure']['paResStatus'],
+                'veResEnrolled'       => $response['3DSecure']['veResEnrolled'],
+                'xid'                 => $response['3DSecure']['xid'],
             );
 
             return false;
         }
 
+        if (Tools::getValue('check_3ds_enrollment') === '2') {
+            if (Tools::getValue('action_type') === 'update_session') {
+                $currency = Context::getContext()->currency;
+                $order = array(
+                    'currency' => $currency->iso_code,
+                    'amount'   => Context::getContext()->cart->getOrderTotal(),
+                );
+
+                $orderId = Tools::getValue('order_id');
+                $sessionId = Tools::getValue('session_id');
+
+                $responseUrl = Context::getContext()->link->getModuleLink(
+                    'mastercard',
+                    'threedsresponse',
+                    array(
+                        'session_id'           => $sessionId,
+                        'action_type'          => 'completed',
+                        'check_3ds_enrollment' => '2',
+                    ),
+                    true
+                );
+
+                $auth = array(
+                    'channel'             => 'PAYER_BROWSER',
+                    'redirectResponseUrl' => $responseUrl,
+                );
+
+                $transaction = array(
+                    'id' => uniqid(sprintf('3DS-%s-', $orderId))
+                );
+
+                $response = $this->client->updateSession(
+                    $orderId,
+                    $sessionId,
+                    $order,
+                    $auth,
+                    $transaction
+                );
+
+                $res = array(
+                    'session'     => $response['session'] ?? [],
+                    'order'       => $response['order'] ?? [],
+                    'transaction' => $response['transaction'] ?? [],
+                    'version'     => $response['version'] ?? [],
+                );
+
+                echo json_encode($res);
+                exit;
+            }
+        }
+
         if (Tools::getValue('check_3ds_enrollment') === "1") {
+            // reset order id
+            $this->module->getNewOrderRef(true);
             $threeD = array(
                 'authenticationRedirect' => array(
                     'pageGenerationMode' => 'CUSTOMIZED',
-                    'responseUrl' => $this->context->link->getModuleLink(
+                    'responseUrl'        => $this->context->link->getModuleLink(
                         $this->module->name,
                         Tools::getValue('controller'),
                         array(),
                         true
-                    )
-                )
+                    ),
+                ),
             );
 
             $session = array(
-                'id' => Tools::getValue('session_id')
+                'id' => Tools::getValue('session_id'),
             );
 
             $currency = Context::getContext()->currency;
             $order = array(
-                'amount' => Context::getContext()->cart->getOrderTotal(),
+                'amount'   => Context::getContext()->cart->getOrderTotal(),
                 'currency' => $currency->iso_code,
             );
 
@@ -139,39 +214,51 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
             );
 
             if ($response['response']['gatewayRecommendation'] !== 'PROCEED') {
-                $this->errors[] = $this->module->l('Your payment was declined.', 'abstract');
-                $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order', null, null, array(
-                    'action' => 'show'
-                )));
+                $this->errors[] = $this->module->l(self::PAYMENT_DECLINED_ERROR, 'abstract');
+                $this->redirectWithNotifications(
+                    Context::getContext()->link->getPageLink(
+                        'order',
+                        true,
+                        null,
+                        array(
+                            'action' => 'show',
+                        )
+                    )
+                );
                 exit;
             }
 
             if (isset($response['3DSecure']['authenticationRedirect'])) {
                 $tdsAuth = $response['3DSecure']['authenticationRedirect']['customized'];
-                $this->context->smarty->assign(array(
-                    'authenticationRedirect' => $tdsAuth,
-                    'returnUrl' => $this->context->link->getModuleLink(
-                        $this->module->name,
-                        Tools::getValue('controller'),
-                        array(
-                            '3DSecureId' => $response['3DSecureId'],
-                            'process_acs_result' => '1',
-                            'session_id' => Tools::getValue('session_id'),
-                            'session_version' => Tools::getValue('session_version'),
+                $this->context->smarty->assign(
+                    array(
+                        'authenticationRedirect' => $tdsAuth,
+                        'returnUrl'              => $this->context->link->getModuleLink(
+                            $this->module->name,
+                            Tools::getValue('controller'),
+                            array(
+                                '3DSecureId'         => $response['3DSecureId'],
+                                'process_acs_result' => '1',
+                                'session_id'         => Tools::getValue('session_id'),
+                                'session_version'    => Tools::getValue('session_version'),
+                            ),
+                            true
                         ),
-                        true
                     )
-                ));
+                );
 
                 $this->setTemplate('module:mastercard/views/templates/front/threedsecure/form.tpl');
+
                 return true;
             }
         }
+
         return false;
     }
 
     /**
      * @param AddressCore $address
+     *
      * @return array
      */
     public function getAddressForGateway($address)
@@ -180,27 +267,68 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
         $country = new Country($address->id_country);
 
         return array(
-            'city' => GatewayService::safe($address->city, 100),
-            'country' => $this->module->iso2ToIso3($country->iso_code),
+            'city'        => GatewayService::safe($address->city, 100),
+            'country'     => $this->module->iso2ToIso3($country->iso_code),
             'postcodeZip' => GatewayService::safe($address->postcode, 10),
-            'street' => GatewayService::safe($address->address1, 100),
-            'street2' => GatewayService::safe($address->address2, 100),
-            'company' => GatewayService::safe($address->company, 100)
+            'street'      => GatewayService::safe($address->address1, 100),
+            'street2'     => GatewayService::safe($address->address2, 100),
+            'company'     => GatewayService::safe($address->company, 100),
         );
     }
 
     /**
      * @param CustomerCore|AddressCore $customer
+     *
      * @return array
      */
     public function getContactForGateway($customer)
     {
         return array(
-            'firstName' => GatewayService::safe($customer->firstname, 50),
-            'lastName' => GatewayService::safe($customer->lastname, 50),
-            'email' => GatewayService::safeProperty($customer, 'email'),
+            'firstName'   => GatewayService::safe($customer->firstname, 50),
+            'lastName'    => GatewayService::safe($customer->lastname, 50),
+            'email'       => GatewayService::safeProperty($customer, 'email'),
             'mobilePhone' => GatewayService::safeProperty($customer, 'phone_mobile'),
-            'phone' => GatewayService::safeProperty($customer, 'phone'),
+            'phone'       => GatewayService::safeProperty($customer, 'phone'),
         );
+    }
+
+    /**
+     * @return float
+     */
+    protected function getDeltaAmount()
+    {
+        if (!Configuration::get('mpgs_lineitems_enabled')) {
+            return 0.00;
+        }
+
+        $total = Context::getContext()->cart->getOrderTotal();
+
+        $precision = $this->getCurrencyPrecision();
+        $cents = pow(10, $precision);
+        $delta = round(($this->module->getItemAmount() * $cents) - ($total * $cents));
+        $deltaAmount = $delta / $cents;
+
+        return max($deltaAmount, 0.00);
+    }
+
+    /**
+     * Retrieves the value of the Current Currency Decimals (precision on the data level)
+     *
+     * @return int
+     */
+    protected function getCurrencyPrecision()
+    {
+        $defaultValue = 2;
+        $currency = Context::getContext()->currency;
+        if (!$currency) {
+            return $defaultValue;
+        }
+
+        $precision = $currency->precision;
+        if (!$precision || $precision <= 0) {
+            return $defaultValue;
+        }
+
+        return (int)$precision;
     }
 }

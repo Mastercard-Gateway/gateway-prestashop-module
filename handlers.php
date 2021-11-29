@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2020 Mastercard
+ * Copyright (c) 2019-2021 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,7 +156,7 @@ abstract class ResponseHandler
             $order_payment->card_number = $txn['sourceOfFunds']['provided']['card']['number'];
             $order_payment->card_expiration = $txn['sourceOfFunds']['provided']['card']['expiry']['month'] . '/' . $txn['sourceOfFunds']['provided']['card']['expiry']['year'];
             $order_payment->card_brand = $txn['sourceOfFunds']['provided']['card']['brand'];
-            $order_payment->card_holder = $txn['sourceOfFunds']['provided']['card']['nameOnCard'];
+            $order_payment->card_holder = isset($txn['sourceOfFunds']['provided']['card']['nameOnCard']) ? $txn['sourceOfFunds']['provided']['card']['nameOnCard'] : null;
         }
 
         // Add time to the date if needed
@@ -423,9 +423,28 @@ class OrderPaymentResponseHandler extends ResponseHandler
                 $handler
                     ->setProcessor($this->processor)
                     ->handle($order, $txn);
+            } else if ($txn['transaction']['type'] == 'AUTHENTICATION') {
+                continue;
             } else {
                 throw new MasterCardPaymentException('Unknown transaction type ' . $txn['transaction']['type']);
             }
+        }
+    }
+}
+
+class ResponseStatusHandler extends ResponseHandler
+{
+    /**
+     * @inheritdoc
+     */
+    public function handle($order, $response)
+    {
+        if (!isset($response['result']) || $response['result'] === 'FAILURE') {
+            throw new MasterCardPaymentException('Transaction declined');
+        }
+
+        if (!isset($response['response']['gatewayCode']) || $response['response']['gatewayCode'] === 'DECLINED') {
+            throw new MasterCardPaymentException('Transaction declined');
         }
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2020 Mastercard
+ * Copyright (c) 2019-2021 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,8 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             $this->_postProcess($cart, $customer);
 
             Tools::redirect(
-                'index.php?controller=order-confirmation&id_cart=' . (int)$cart->id . '&id_module=' . (int)$this->module->id . '&id_order=' . $this->module->currentOrder . '&key=' . $customer->secure_key
+                sprintf("index.php?controller=order-confirmation&id_cart=%d&id_module=%d&id_order=%s&key=%s",
+                    (int)$cart->id, (int)$this->module->id, $this->module->currentOrder, $customer->secure_key)
             );
 
         } catch (Exception $e) {
@@ -63,36 +64,21 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
      */
     protected function _postProcess($cart, $customer)
     {
-        $currency = Context::getContext()->currency;
         $session = array(
-            'id' => Tools::getValue('session_id'),
-            'version' => Tools::getValue('session_version'),
+            'id' => Tools::getValue('session_id')
         );
 
-        $orderData = array(
-            'currency' => $currency->iso_code,
-            'amount' => GatewayService::numeric(
-                Context::getContext()->cart->getOrderTotal()
-            ),
-            'item' => $this->module->getOrderItems(),
-            'itemAmount' => $this->module->getItemAmount(),
-            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount(),
-        );
+        $authentication = [
+            'transactionId' => Tools::getValue('transaction_id')
+        ];
 
-        /** @var ContextCore $context */
-        $context = Context::getContext();
+        $treeDSVersion = Configuration::get('mpgs_hs_3ds');
 
-        /** @var CartCore $cart */
-        $cart = $context->cart;
+        $orderData = $this->getOrderData();
 
-        /** @var AddressCore $billingAddress */
         $billingAddress = new Address($cart->id_address_invoice);
 
-        /** @var AddressCore $shippingAddress */
         $shippingAddress = new Address($cart->id_address_delivery);
-
-        /** @var CustomerCore $customer */
-        $customer = Context::getContext()->customer;
 
         // Create order before the payment occurs
         $this->module->validateOrder(
@@ -102,7 +88,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             MasterCard::PAYMENT_CODE,
             null,
             array(),
-            $currency->id,
+            Context::getContext()->currency->id,
             false,
             $customer->secure_key
         );
@@ -115,12 +101,14 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             $response = $this->client->authorize(
                 $this->module->getNewOrderRef(),
                 $orderData,
-                $this->threeDSecureData ? : null,
+                $this->threeDSecureId,
                 $session,
                 $this->getContactForGateway($customer),
                 $this->getAddressForGateway($billingAddress),
                 $this->getAddressForGateway($shippingAddress),
-                $this->getContactForGateway($shippingAddress)
+                $this->getContactForGateway($shippingAddress),
+                $authentication,
+                $treeDSVersion
             );
 
             $processor = new ResponseProcessor($this->module);
@@ -134,23 +122,46 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             $response = $this->client->pay(
                 $this->module->getNewOrderRef(),
                 $orderData,
-                $this->threeDSecureData ? : null,
+                $this->threeDSecureId,
                 $session,
                 $this->getContactForGateway($customer),
                 $this->getAddressForGateway($billingAddress),
                 $this->getAddressForGateway($shippingAddress),
-                $this->getContactForGateway($shippingAddress)
+                $this->getContactForGateway($shippingAddress),
+                $authentication,
+                $treeDSVersion
             );
 
             $processor = new ResponseProcessor($this->module);
             $processor->handle($order, $response, array(
                 new RiskResponseHandler(),
                 new CaptureResponseHandler(),
+                new ResponseStatusHandler(),
                 new TransactionStatusResponseHandler(),
             ));
 
         } else {
             throw new Exception('Unexpected response from the Payment Gateway');
         }
+    }
+
+    /**
+     * @return array
+     * @throws Exception
+     */
+    protected function getOrderData()
+    {
+        $deltaAmount = $this->getDeltaAmount();
+
+        $currency = Context::getContext()->currency;
+        return array(
+            'currency' => $currency->iso_code,
+            'amount' => GatewayService::numeric(
+                Context::getContext()->cart->getOrderTotal()
+            ),
+            'item' => $this->module->getOrderItems($deltaAmount),
+            'itemAmount' => $this->module->getItemAmount($deltaAmount),
+            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaAmount),
+        );
     }
 }

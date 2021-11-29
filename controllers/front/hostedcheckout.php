@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2020 Mastercard
+ * Copyright (c) 2019-2021 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,17 +29,20 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
      */
     protected function createSessionAndRedirect()
     {
-        $orderId = $this->module->getNewOrderRef();
+        $orderId = $this->module->getNewOrderRef(true);
+
+        $deltaAmount = $this->getDeltaAmount();
 
         $order = array(
             'id' => $orderId,
+            'reference' => $orderId,
             'currency' => Context::getContext()->currency->iso_code,
             'amount' => GatewayService::numeric(
                 Context::getContext()->cart->getOrderTotal()
             ),
-            'item' => $this->module->getOrderItems(),
-            'itemAmount' => $this->module->getItemAmount(),
-            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount(),
+            'item' => $this->module->getOrderItems($deltaAmount),
+            'itemAmount' => $this->module->getItemAmount($deltaAmount),
+            'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaAmount),
         );
 
         $interaction = array(
@@ -52,7 +55,8 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
             ),
             'merchant' => array(
                 'name' => GatewayService::safe(Context::getContext()->shop->name, 40),
-            )
+            ),
+            'operation' => Configuration::get('mpgs_hc_payment_action')
         );
 
         /** @var ContextCore $context */
@@ -123,11 +127,15 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
      */
     protected function createOrderAndRedirect()
     {
-        $orderId = Tools::getValue('order_id');
+        $orderIdParts = explode('-', Tools::getValue('order_id'));
+        $orderIdOld = reset($orderIdParts);
         $cart = Context::getContext()->cart;
         $currency = Context::getContext()->currency;
 
-        if ($orderId !== $this->module->getNewOrderRef()) {
+        $orderId = $this->module->getNewOrderRef();
+        $orderIdParts = explode('-', $orderId);
+
+        if ($orderIdOld !== reset($orderIdParts)) {
             $this->errors[] = $this->module->l('Invalid data (order)', 'hostedcheckout');
             $this->redirectWithNotifications('index.php?controller=order&step=1');
         }

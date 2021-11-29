@@ -16,10 +16,16 @@
  *
  */
 
-//$sql = array();
-//
-//foreach ($sql as $query) {
-//    if (Db::getInstance()->execute($query) == false) {
-//        return false;
-//    }
-//}
+if (!defined('_PS_VERSION_')) {
+    exit;
+}
+
+/**
+ * @param Mastercard $module
+ * @return bool
+ * @throws PrestaShopException
+ */
+function upgrade_module_1_3_0($module)
+{
+    return $module->upgrade_module_1_3_0();
+}
