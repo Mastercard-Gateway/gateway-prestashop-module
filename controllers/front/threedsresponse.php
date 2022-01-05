@@ -73,13 +73,12 @@ class MastercardThreeDSResponseModuleFrontController extends ModuleFrontControll
     {
         $transactionId = Tools::getValue('transaction_id');
         $result = Tools::getValue('result');
-        $error = $this->module->l('Your payment was declined.', 'threedsresponse');
         if ($result === 'SUCCESS') {
             echo "<script>window.parent.treeDS2Completed('{$transactionId}');</script>";
         } else {
+            $error = $this->module->l('Your payment was declined.', 'threedsresponse');
             echo "<script>window.parent.treeDS2Failure('{$error}');</script>";
         }
-
         exit;
     }
 }

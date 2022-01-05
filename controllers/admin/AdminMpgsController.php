@@ -123,7 +123,6 @@ class AdminMpgsController extends ModuleAdminController
 
         $response = $this->client->captureTxn(
             $this->module->getOrderRef($order),
-            $txn->transaction_id,
             $txn->amount,
             $currency['iso_code']
         );
