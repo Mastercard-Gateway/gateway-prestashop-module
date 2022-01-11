@@ -53,11 +53,11 @@ class MpgsRefundService
      * @param Order $order
      * @param ResponseHandler[] $handlers
      * @param int $amount
-     * @param string $tnxNumber
+     *
      * @throws MasterCardPaymentException
      * @throws \Http\Client\Exception
      */
-    public function execute($order, array $handlers = [], $amount = 0, $tnxNumber = '')
+    public function execute($order, array $handlers = [], $amount = 0)
     {
         $txnData = $this->client->getCaptureTransaction($this->module->getOrderRef($order));
         $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
@@ -70,7 +70,6 @@ class MpgsRefundService
 
         $response = $this->client->refund(
             $this->module->getOrderRef($order),
-            $tnxNumber ? $tnxNumber : $txn->transaction_id,
             $amount ? $amount : $txn->amount,
             $currency['iso_code']
         );

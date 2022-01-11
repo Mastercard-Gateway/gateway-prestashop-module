@@ -172,13 +172,13 @@ abstract class ResponseHandler
         }
 
         // We put autodate parameter of add method to true if date_add field is null
-        $res = $order_payment->add(is_null($order_payment->date_add)) && $order->update();
+        $result = $order_payment->add(is_null($order_payment->date_add)) && $order->update();
 
-        if (!$res) {
+        if (!$result) {
             return false;
         }
 
-        return $res;
+        return $result;
     }
 }
 
