@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2021 Mastercard
+ * Copyright (c) 2019-2022 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,13 +13,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-require_once(dirname(__FILE__) . '/../../vendor/autoload.php');
-require_once(dirname(__FILE__) . '/../../gateway.php');
-require_once(dirname(__FILE__) . '/../../handlers.php');
-require_once(dirname(__FILE__) . '/../../service/MpgsRefundService.php');
+require_once(dirname(__FILE__).'/../../vendor/autoload.php');
+require_once(dirname(__FILE__).'/../../gateway.php');
+require_once(dirname(__FILE__).'/../../handlers.php');
+require_once(dirname(__FILE__).'/../../service/MpgsRefundService.php');
 
 class AdminMpgsController extends ModuleAdminController
 {
@@ -40,7 +39,7 @@ class AdminMpgsController extends ModuleAdminController
     public function postProcess()
     {
         $action = Tools::getValue('action');
-        $actionName = $action . 'Action';
+        $actionName = $action.'Action';
 
         $this->client = new GatewayService(
             $this->module->getApiEndpoint(),
@@ -55,12 +54,13 @@ class AdminMpgsController extends ModuleAdminController
 
         try {
             $this->{$actionName}($order);
-            Tools::redirectAdmin($this->context->link->getAdminLink('AdminOrders').'&conf=4&id_order='.(int)$order->id.'&vieworder');
+            $redirectLink = $this->getSuccessOrderLink((int)$order->id);
+            Tools::redirectAdmin($redirectLink);
         } catch (Exception $e) {
             $this->errors[] = $e->getMessage() . ' (' . $e->getCode() . ')';
         }
 
-        parent::postProcess();
+        return parent::postProcess();
     }
 
     /**
@@ -81,6 +81,7 @@ class AdminMpgsController extends ModuleAdminController
 
     /**
      * @param Order $order
+     *
      * @throws MasterCardPaymentException
      * @throws \Http\Client\Exception
      * @throws Exception
@@ -89,7 +90,6 @@ class AdminMpgsController extends ModuleAdminController
     {
         $txnData = $this->client->getAuthorizationTransaction($this->module->getOrderRef($order));
         $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
-
         if (!$txn) {
             throw new Exception('Authorization transaction not found.');
         }
@@ -98,13 +98,14 @@ class AdminMpgsController extends ModuleAdminController
 
         $processor = new ResponseProcessor($this->module);
         $processor->handle($order, $response, array(
-            new VoidResponseHandler(),
             new TransactionStatusResponseHandler(),
+            new VoidResponseHandler(),
         ));
     }
 
     /**
      * @param Order $order
+     *
      * @throws MasterCardPaymentException
      * @throws PrestaShopException
      * @throws \Http\Client\Exception
@@ -138,6 +139,7 @@ class AdminMpgsController extends ModuleAdminController
 
     /**
      * @param Order $order
+     *
      * @throws MasterCardPaymentException
      * @throws \Http\Client\Exception
      * @throws Exception
@@ -145,17 +147,26 @@ class AdminMpgsController extends ModuleAdminController
     protected function refundAction($order)
     {
         $refundService = new MpgsRefundService($this->module);
-
-        $response = $refundService->execute($order, array(
+        $refundService->execute($order, array(
             new TransactionResponseHandler(),
             new TransactionStatusResponseHandler(),
+            new RefundResponseHandler(),
         ));
+    }
 
-        $refund = new MpgsRefund();
+    /**
+     * @param int $orderId
+     *
+     * @return string
+     */
+    private function getSuccessOrderLink($orderId)
+    {
+        $link = $this->context->link;
 
-        $refund->order_id = $order->id;
-        $refund->total = $response['transaction']['amount'];
-        $refund->transaction_id = $response['transaction']['id'];
-        $refund->add();
+        return sprintf(
+            "%s&conf=4&id_order=%d&vieworder",
+            $link->getAdminLink('AdminOrders', true, ['id_order' => $orderId, 'vieworder' => 1], []),
+            $orderId
+        );
     }
 }
