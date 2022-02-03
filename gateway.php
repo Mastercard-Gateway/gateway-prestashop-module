@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2021 Mastercard
+ * Copyright (c) 2019-2022 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -921,16 +921,17 @@ class GatewayService
         $newTxnId = $this->getUniqueTransactionId($orderId);
         $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$newTxnId;
 
-        $requestData = json_encode(array(
+        $requestData = array(
             'apiOperation'      => 'VOID',
             'partnerSolutionId' => $this->getSolutionId(),
             'transaction'       => array(
                 'targetTransactionId' => $txnId,
                 'reference'           => $newTxnId,
             ),
-        ));
+        );
+        $requestJson = json_encode($requestData);
 
-        $request = $this->messageFactory->createRequest('PUT', $uri, array(), $requestData);
+        $request = $this->messageFactory->createRequest('PUT', $uri, array(), $requestJson);
 
         $response = $this->client->sendRequest($request);
         $response = json_decode($response->getBody(), true);

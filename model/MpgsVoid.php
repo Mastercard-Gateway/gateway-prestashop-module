@@ -15,11 +15,10 @@
  * limitations under the License.
  */
 
-class MpgsRefund extends ObjectModel
+class MpgsVoid extends ObjectModel
 {
-    public $refund_id;
+    public $void_id;
     public $order_id;
-    public $order_slip_id;
     public $total;
     public $transaction_id;
 
@@ -27,13 +26,12 @@ class MpgsRefund extends ObjectModel
      * @see ObjectModel::$definition
      */
     public static $definition = array(
-        'table' => 'mpgs_payment_refunds',
-        'primary' => 'refund_id',
+        'table' => 'mpgs_payment_voids',
+        'primary' => 'void_id',
         'multilang' => false,
         'multilang_shop' => false,
         'fields' => array(
             'order_id' => array('type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'),
-            'order_slip_id' => array('type' => self::TYPE_INT, 'validate' => 'isUnsignedInt'),
             'total' => array('type' => self::TYPE_FLOAT),
             'transaction_id' => array('type' => self::TYPE_STRING, 'size' => 255),
         ),
@@ -43,7 +41,7 @@ class MpgsRefund extends ObjectModel
      * @param string|int $orderId
      * @return bool
      */
-    public static function hasExistingRefunds($orderId)
+    public static function hasExistingVoids($orderId)
     {
         $sql = new DbQuery();
         $sql->from(self::$definition['table']);
@@ -57,25 +55,9 @@ class MpgsRefund extends ObjectModel
 
     /**
      * @param string|int $orderId
-     * @return bool
-     */
-    public static function hasExistingFullRefund($orderId)
-    {
-        $sql = new DbQuery();
-        $sql->from(self::$definition['table']);
-        $sql->select('COUNT(*)');
-        $sql->where('order_id = ' . pSQL($orderId) . ' AND ' . 'order_slip_id=0');
-
-        $res = Db::getInstance()->getValue($sql);
-
-        return !!$res;
-    }
-
-    /**
-     * @param string|int $orderId
      * @return self[]
      */
-    public static function getAllRefundsByOrderId($orderId)
+    public static function getAllVoidsByOrderId($orderId)
     {
         $sql = new DbQuery();
         $sql->from(self::$definition['table']);

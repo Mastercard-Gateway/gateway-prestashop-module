@@ -60,6 +60,7 @@
     })
 </script>
 
+{if $has_refunds}
 <div class="card mt-2" id="view_order_payments_block">
     <div class="card-header">
         <h3 class="card-header-title">
@@ -97,3 +98,34 @@
         </table>
     </div>
 </div>
+{/if}
+
+{if $has_voids}
+<div class="card mt-2" id="view_order_payments_block">
+  <div class="card-header">
+    <h3 class="card-header-title">
+        {l s='MasterCard Payment Void (Online)' mod='mastercard'}
+    </h3>
+  </div>
+  <div class="card-body">
+    <table class="table">
+      <thead>
+      <tr>
+        <th class="table-head-date">Id</th>
+        <th class="table-head-amount">Amount</th>
+        <th class="table-head-invoice">Transaction ID</th>
+      </tr>
+      </thead>
+      <tbody>
+      {foreach $voids AS $void}
+        <tr>
+          <td>{$void->void_id}</td>
+          <td>{displayPrice price=$void->total currency=$void->id_currency}</td>
+          <td>{$void->transaction_id}</td>
+        </tr>
+      {/foreach}
+      </tbody>
+    </table>
+  </div>
+</div>
+{/if}
