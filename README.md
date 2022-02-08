@@ -24,6 +24,20 @@ You can obtain the module by downloading a release from: [https://github.com/Mas
 Please refer to official Prestashop documentation for general installation guidelines  
 [https://addons.prestashop.com/en/content/13-installing-modules](https://addons.prestashop.com/en/content/13-installing-modules)
 
+## Feature Support
+
+Prestashop Mastercard Payment Gateway Service module supports following list of features:
+
+- Card payments
+- Alternative payment methods
+- Hosted Session
+- Hosted Checkout
+- Full refunds
+- Partial refunds
+- AVS
+- 3DSv1
+- 3DSv2
+
 ## General settings
 
 Once you have the Mastercard Payment Gateway Service module installed, you can configure the module from admin panel.
