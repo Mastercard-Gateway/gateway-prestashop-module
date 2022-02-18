@@ -38,6 +38,11 @@ Prestashop Mastercard Payment Gateway Service module supports following list of 
 - 3DSv1
 - 3DSv2
 
+## Documentation
+
+The official documentation for this module is available on: [http://ontap.wiki/prestashop-mastercard-payment-gateway-services](http://ontap.wiki/prestashop-mastercard-payment-gateway-services)
+
+
 ## General settings
 
 Once you have the Mastercard Payment Gateway Service module installed, you can configure the module from admin panel.
