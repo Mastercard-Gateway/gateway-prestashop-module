@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2021 Mastercard
+ * Copyright (c) 2019-2022 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
  *
  */
 
-require_once(dirname(__FILE__) . '/../vendor/autoload.php');
-require_once(dirname(__FILE__) . '/../gateway.php');
-require_once(dirname(__FILE__) . '/../handlers.php');
+require_once(dirname(__FILE__).'/../vendor/autoload.php');
+require_once(dirname(__FILE__).'/../gateway.php');
+require_once(dirname(__FILE__).'/../handlers.php');
 
 class MpgsRefundService
 {
@@ -34,11 +34,11 @@ class MpgsRefundService
 
     /**
      * MpgsRefundService constructor.
+     *
      * @param Mastercard $module
      */
-    public function __construct(
-        Mastercard $module
-    ) {
+    public function __construct(Mastercard $module)
+    {
         $this->client = new GatewayService(
             $module->getApiEndpoint(),
             $module->getApiVersion(),
@@ -53,11 +53,11 @@ class MpgsRefundService
      * @param Order $order
      * @param ResponseHandler[] $handlers
      * @param int $amount
-     * @param string $tnxNumber
+     *
      * @throws MasterCardPaymentException
      * @throws \Http\Client\Exception
      */
-    public function execute($order, array $handlers = [], $amount = 0, $tnxNumber = '')
+    public function execute($order, array $handlers = [], $amount = 0)
     {
         $txnData = $this->client->getCaptureTransaction($this->module->getOrderRef($order));
         $txn = $this->module->getTransactionById($order, $txnData['transaction']['id']);
@@ -70,7 +70,6 @@ class MpgsRefundService
 
         $response = $this->client->refund(
             $this->module->getOrderRef($order),
-            $tnxNumber ? $tnxNumber : $txn->transaction_id,
             $amount ? $amount : $txn->amount,
             $currency['iso_code']
         );

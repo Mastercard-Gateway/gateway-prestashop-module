@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2021 Mastercard
+ * Copyright (c) 2019-2022 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -622,7 +622,8 @@ class GatewayService
         $shipping = array(),
         $shippingContact = array()
     ) {
-        $txnId = uniqid(sprintf('%s-', $order['id']));
+        $orderId = $order['id'];
+        $txnId = $this->getUniqueTransactionId($orderId);
         $uri = $this->apiUrl.'session';
 
         $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode(array(
@@ -685,7 +686,7 @@ class GatewayService
         $authentication = array(),
         $threeDSVersion = '1'
     ) {
-        $txnId = uniqid(sprintf('%s-', $orderId));
+        $txnId = $this->getUniqueTransactionId($orderId);
         $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$txnId;
 
         $body = array(
@@ -763,7 +764,7 @@ class GatewayService
         $authentication = array(),
         $threeDSVersion = '1'
     ) {
-        $txnId = uniqid(sprintf('%s-', $orderId));
+        $txnId = $this->getUniqueTransactionId($orderId);
         $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$txnId;
 
         $body = array(
@@ -917,19 +918,22 @@ class GatewayService
      */
     public function voidTxn($orderId, $txnId)
     {
-        $newTxnId = 'void-'.$txnId;
+        $newTxnId = $this->getUniqueTransactionId($orderId);
         $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$newTxnId;
 
-        $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
+        $requestData = array(
             'apiOperation'      => 'VOID',
             'partnerSolutionId' => $this->getSolutionId(),
             'transaction'       => array(
                 'targetTransactionId' => $txnId,
-                'reference'           => $txnId,
+                'reference'           => $newTxnId,
             ),
-        )));
-        $response = $this->client->sendRequest($request);
+        );
+        $requestJson = json_encode($requestData);
 
+        $request = $this->messageFactory->createRequest('PUT', $uri, array(), $requestJson);
+
+        $response = $this->client->sendRequest($request);
         $response = json_decode($response->getBody(), true);
 
         $this->validateVoidResponse($response);
@@ -947,17 +951,16 @@ class GatewayService
      * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
      * @param string $orderId
-     * @param string $txnId
-     * @param $amount
-     * @param $currency
+     * @param float $amount
+     * @param string $currency
      *
      * @return mixed|ResponseInterface
      * @throws Exception
      */
-    public function captureTxn($orderId, $txnId, $amount, $currency)
+    public function captureTxn($orderId, $amount, $currency)
     {
-        $newTxnId = 'capture-'.$txnId;
-        $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$newTxnId;
+        $txnId = $this->getUniqueTransactionId($orderId);
+        $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$txnId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
             'apiOperation'      => 'CAPTURE',
@@ -965,7 +968,7 @@ class GatewayService
             'transaction'       => array(
                 'amount'    => $amount,
                 'currency'  => $currency,
-                'reference' => $newTxnId,
+                'reference' => $txnId,
             ),
             'order'             => array(
                 'notificationUrl' => $this->webhookUrl,
@@ -990,17 +993,16 @@ class GatewayService
      * In this case, you need to provide the sourceOfFunds and a new orderId.
      * https://mtf.gateway.mastercard.com/api/rest/version/58/merchant/{merchantId}/order/{orderid}/transaction/{transactionid}
      *
-     * @param $orderId
-     * @param $txnId
-     * @param $amount
-     * @param $currency
+     * @param string $orderId
+     * @param float $amount
+     * @param string $currency
      *
      * @return mixed|ResponseInterface
      * @throws Exception
      */
-    public function refund($orderId, $txnId, $amount, $currency)
+    public function refund($orderId, $amount, $currency)
     {
-        $newTxnId = 'refund-'.$txnId;
+        $newTxnId = $this->getUniqueTransactionId($orderId);
         $uri = $this->apiUrl.'order/'.$orderId.'/transaction/'.$newTxnId;
 
         $request = $this->messageFactory->createRequest('PUT', $uri, array(), json_encode(array(
@@ -1041,5 +1043,17 @@ class GatewayService
         $response = json_decode($response->getBody(), true);
 
         return $response;
+    }
+
+    /**
+     * @param string $orderReference
+     *
+     * @return string
+     */
+    private function getUniqueTransactionId($orderReference)
+    {
+        $uniqId = substr(uniqid(), 7, 6);
+
+        return sprintf('%s-%s', $orderReference, $uniqId);
     }
 }

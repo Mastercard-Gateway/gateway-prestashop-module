@@ -184,7 +184,7 @@ abstract class MastercardAbstractModuleFrontController extends ModuleFrontContro
 
         if (Tools::getValue('check_3ds_enrollment') === "1") {
             // reset order id
-            $this->module->getNewOrderRef(true);
+            $this->module->getNewOrderRef();
             $threeD = array(
                 'authenticationRedirect' => array(
                     'pageGenerationMode' => 'CUSTOMIZED',

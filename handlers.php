@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2021 Mastercard
+ * Copyright (c) 2019-2022 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,9 @@
 
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
+
+require_once(dirname(__FILE__).'/model/MpgsRefund.php');
+require_once(dirname(__FILE__).'/model/MpgsVoid.php');
 
 class MasterCardPaymentException extends Exception
 {
@@ -43,7 +46,9 @@ class ResponseProcessor
 
     /**
      * ResponseProcessor constructor.
+     *
      * @param Module $module
+     *
      * @throws Exception
      */
     public function __construct($module)
@@ -60,6 +65,7 @@ class ResponseProcessor
      * @param Order $order
      * @param array $response
      * @param ResponseHandler[] $handlers
+     *
      * @throws MasterCardPaymentException
      */
     public function handle($order, $response, $handlers = array())
@@ -70,7 +76,7 @@ class ResponseProcessor
                 $handler
                     ->setProcessor($this)
                     ->handle($order, $response);
-            }  catch (Exception $e) {
+            } catch (Exception $e) {
                 $this->logger->critical('Payment Handler Exception', array('exception' => $e));
                 $this->exceptions[] = $e->getMessage();
             }
@@ -92,6 +98,7 @@ abstract class ResponseHandler
     /**
      * @param Order $order
      * @param array $response
+     *
      * @throws MasterCardPaymentException
      */
     abstract public function handle($order, $response);
@@ -99,16 +106,19 @@ abstract class ResponseHandler
 
     /**
      * @param ResponseProcessor $processor
+     *
      * @return $this
      */
     public function setProcessor($processor)
     {
         $this->processor = $processor;
+
         return $this;
     }
 
     /**
      * @param $response
+     *
      * @return bool
      */
     protected function isApproved($response)
@@ -131,15 +141,16 @@ abstract class ResponseHandler
     }
 
     /**
-     * @todo: This is currently almost identical to Order->addOrderPayment()
-     *
      * @param Order $order
      * @param float $amount_paid
      * @param string $payment_transaction_id
      * @param array $txn
+     *
      * @return bool
      * @throws PrestaShopDatabaseException
      * @throws PrestaShopException
+     * @todo: This is currently almost identical to Order->addOrderPayment()
+     *
      */
     public function addOrderPayment($order, $amount_paid, $payment_transaction_id = null, $txn = array())
     {
@@ -154,7 +165,7 @@ abstract class ResponseHandler
 
         if (isset($txn['sourceOfFunds'], $txn['sourceOfFunds']['provided'], $txn['sourceOfFunds']['provided']['card'])) {
             $order_payment->card_number = $txn['sourceOfFunds']['provided']['card']['number'];
-            $order_payment->card_expiration = $txn['sourceOfFunds']['provided']['card']['expiry']['month'] . '/' . $txn['sourceOfFunds']['provided']['card']['expiry']['year'];
+            $order_payment->card_expiration = $txn['sourceOfFunds']['provided']['card']['expiry']['month'].'/'.$txn['sourceOfFunds']['provided']['card']['expiry']['year'];
             $order_payment->card_brand = $txn['sourceOfFunds']['provided']['card']['brand'];
             $order_payment->card_holder = isset($txn['sourceOfFunds']['provided']['card']['nameOnCard']) ? $txn['sourceOfFunds']['provided']['card']['nameOnCard'] : null;
         }
@@ -168,17 +179,18 @@ abstract class ResponseHandler
         if ($order_payment->id_currency == $order->id_currency) {
             $order->total_paid_real += $order_payment->amount;
         } else {
-            $order->total_paid_real += Tools::ps_round(Tools::convertPrice($order_payment->amount, $order_payment->id_currency, false), 2);
+            $order->total_paid_real += Tools::ps_round(Tools::convertPrice($order_payment->amount,
+                $order_payment->id_currency, false), 2);
         }
 
         // We put autodate parameter of add method to true if date_add field is null
-        $res = $order_payment->add(is_null($order_payment->date_add)) && $order->update();
+        $result = $order_payment->add(is_null($order_payment->date_add)) && $order->update();
 
-        if (!$res) {
+        if (!$result) {
             return false;
         }
 
-        return $res;
+        return $result;
     }
 }
 
@@ -193,22 +205,39 @@ class RefundResponseHandler extends TransactionResponseHandler
             parent::handle($order, $response);
         } catch (MasterCardPaymentException $e) {
             $this->processor->logger->warning($e->getMessage());
+
             return;
         }
 
-        $amount = number_format((float) $response['transaction']['amount'] * -1, 2, '.', '');
-        $this->addOrderPayment(
-            $order,
-            $amount,
-            $response['transaction']['id'],
-            $response
-        );
+        $refund = new MpgsRefund();
+        $refund->order_id = $order->id;
+        $refund->total = $response['transaction']['amount'];
+        $refund->transaction_id = $response['transaction']['id'];
+        $refund->add();
     }
 }
 
-class VoidResponseHandler extends RefundResponseHandler
+class VoidResponseHandler extends TransactionResponseHandler
 {
+    /**
+     * @inheritdoc
+     */
+    public function handle($order, $response)
+    {
+        try {
+            parent::handle($order, $response);
+        } catch (MasterCardPaymentException $e) {
+            $this->processor->logger->warning($e->getMessage());
 
+            return;
+        }
+
+        $refund = new MpgsVoid();
+        $refund->order_id = $order->id;
+        $refund->total = $response['transaction']['amount'];
+        $refund->transaction_id = $response['transaction']['id'];
+        $refund->add();
+    }
 }
 
 class CaptureResponseHandler extends TransactionResponseHandler
@@ -222,6 +251,7 @@ class CaptureResponseHandler extends TransactionResponseHandler
             parent::handle($order, $response);
         } catch (MasterCardPaymentException $e) {
             $this->processor->logger->warning($e->getMessage());
+
             return;
         }
 
@@ -246,6 +276,7 @@ class AuthorizationResponseHandler extends TransactionResponseHandler
             parent::handle($order, $response);
         } catch (MasterCardPaymentException $e) {
             $this->processor->logger->warning($e->getMessage());
+
             return;
         }
 
@@ -255,7 +286,6 @@ class AuthorizationResponseHandler extends TransactionResponseHandler
             $response['transaction']['id'],
             $response
         );
-
     }
 }
 
@@ -282,7 +312,7 @@ class TransactionResponseHandler extends ResponseHandler
 
         if (!$this->isApproved($response)) {
             throw new MasterCardPaymentException(
-                $this->processor->module->l('The operation was declined.') . ' ('.$response['response']['gatewayCode'].')'
+                $this->processor->module->l('The operation was declined.').' ('.$response['response']['gatewayCode'].')'
             );
         }
     }
@@ -293,6 +323,7 @@ class OrderStatusResponseHandler extends ResponseHandler
     /**
      * @param Order $order
      * @param array $response
+     *
      * @throws PrestaShopDatabaseException
      * @throws PrestaShopException
      */
@@ -311,6 +342,7 @@ class OrderStatusResponseHandler extends ResponseHandler
             $history->id_order = (int)$order->id;
             $history->changeIdOrderState(Configuration::get('PS_OS_ERROR'), $order, true);
             $history->addWithemail(true, array());
+
             return;
         }
 
@@ -335,9 +367,9 @@ class OrderStatusResponseHandler extends ResponseHandler
         if (!$newStatus) {
             $newStatus = Configuration::get('PS_OS_ERROR');
             $this->processor->logger->error(
-                'Unexpected response status "' . $response['status'] . '"',
+                'Unexpected response status "'.$response['status'].'"',
                 array(
-                    'response' => $response
+                    'response' => $response,
                 )
             );
         }
@@ -368,6 +400,7 @@ class RiskResponseHandler extends ResponseHandler
     /**
      * @param Order $order
      * @param array $response
+     *
      * @throws PrestaShopDatabaseException
      * @throws PrestaShopException
      */
@@ -418,15 +451,15 @@ class OrderPaymentResponseHandler extends ResponseHandler
                 $handler
                     ->setProcessor($this->processor)
                     ->handle($order, $txn);
-            } else if ($txn['transaction']['type'] == 'CAPTURE' || $txn['transaction']['type'] == 'PAYMENT') {
+            } elseif ($txn['transaction']['type'] == 'CAPTURE' || $txn['transaction']['type'] == 'PAYMENT') {
                 $handler = new CaptureResponseHandler();
                 $handler
                     ->setProcessor($this->processor)
                     ->handle($order, $txn);
-            } else if ($txn['transaction']['type'] == 'AUTHENTICATION') {
+            } elseif ($txn['transaction']['type'] == 'AUTHENTICATION') {
                 continue;
             } else {
-                throw new MasterCardPaymentException('Unknown transaction type ' . $txn['transaction']['type']);
+                throw new MasterCardPaymentException('Unknown transaction type '.$txn['transaction']['type']);
             }
         }
     }

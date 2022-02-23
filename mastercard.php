@@ -29,7 +29,7 @@ require_once(dirname(__FILE__).'/gateway.php');
 require_once(dirname(__FILE__).'/handlers.php');
 require_once(dirname(__FILE__).'/service/MpgsRefundService.php');
 require_once(dirname(__FILE__).'/model/MpgsRefund.php');
-require_once(dirname(__FILE__).'/model/MpgsOrderSuffix.php');
+require_once(dirname(__FILE__).'/model/MpgsVoid.php');
 
 /**
  * @property bool bootstrap
@@ -70,7 +70,7 @@ class Mastercard extends PaymentModule
         $this->name = 'mastercard';
         $this->tab = 'payments_gateways';
 
-        $this->version = '1.3.5';
+        $this->version = '1.3.7';
         if (!defined('MPGS_VERSION')) {
             define('MPGS_VERSION', $this->version);
         }
@@ -148,10 +148,11 @@ class Mastercard extends PaymentModule
                $this->registerHook('displayAdminOrderSideBottom') &&
                $this->registerHook('displayBackOfficeOrderActions') &&
                $this->registerHook('actionObjectOrderSlipAddAfter') &&
-               $this->upgrade_module_1_2_0() && // Run update script for new installation
-               $this->upgrade_module_1_3_0() && // Run update script for new installation
-               $this->upgrade_module_1_3_3() && // Run update script for new installation
-               $this->upgrade_module_1_3_5(); // Run update script for new installation
+               $this->upgrade_module_1_2_0() &&
+               $this->upgrade_module_1_3_0() &&
+               $this->upgrade_module_1_3_3() &&
+               $this->upgrade_module_1_3_6() &&
+               $this->upgrade_module_1_3_7();
     }
 
     /**
@@ -651,8 +652,8 @@ class Mastercard extends PaymentModule
                         'options' => array(
                             'query' => array(
                                 array(
-                                    'id' => self::PAYMENT_ACTION_PAY,
-                                    'name' => $this->l('Purchase (Pay)')
+                                    'id'   => self::PAYMENT_ACTION_PAY,
+                                    'name' => $this->l('Purchase (Pay)'),
                                 ),
                                 array(
                                     'id'   => self::PAYMENT_ACTION_AUTHCAPTURE,
@@ -871,7 +872,7 @@ class Mastercard extends PaymentModule
                 'mpgs_api_password',
                 'test_mpgs_api_password',
                 'mpgs_webhook_secret',
-                'test_mpgs_webhook_secret'
+                'test_mpgs_webhook_secret',
             );
 
             if (in_array($key, $hiddenKeys)) {
@@ -967,8 +968,7 @@ class Mastercard extends PaymentModule
                 array(
                     new TransactionResponseHandler(),
                 ),
-                $amount,
-                'partial-'.$orderSlip->id
+                $amount
             );
 
             $refund = new MpgsRefund();
@@ -1027,7 +1027,10 @@ class Mastercard extends PaymentModule
             'is_authorized'      => $isAuthorized,
             'can_review'         => $canReview,
             'can_action'         => $canAction,
+            'has_refunds'        => MpgsRefund::hasExistingRefunds($order->id),
             'refunds'            => MpgsRefund::getAllRefundsByOrderId($order->id),
+            'has_voids'          => MpgsVoid::hasExistingVoids($order->id),
+            'voids'              => MpgsVoid::getAllVoidsByOrderId($order->id),
         ));
 
         return $this->display(__FILE__, $view);
@@ -1217,19 +1220,6 @@ class Mastercard extends PaymentModule
     }
 
     /**
-     * @param string|int $cartId
-     * @param false $refresh
-     *
-     * @return string
-     */
-    private function getOrderSuffix($cartId, $refresh = false)
-    {
-        $suffixModel = MpgsOrderSuffix::getOrderSuffixByOrderId($cartId, $refresh);
-
-        return $suffixModel ? '-'.$suffixModel->suffix : '';
-    }
-
-    /**
      * @param Order $order
      *
      * @return string
@@ -1237,24 +1227,20 @@ class Mastercard extends PaymentModule
     public function getOrderRef($order)
     {
         $cartId = (string)$order->id_cart;
-        $suffix = $this->getOrderSuffix($cartId);
         $prefix = Configuration::get('mpgs_order_prefix') ?: '';
 
-        return $prefix.$cartId.$suffix;
+        return $prefix.$cartId;
     }
 
     /**
-     * @param bool $refreshSuffix
-     *
      * @return string
      */
-    public function getNewOrderRef($refreshSuffix = false)
+    public function getNewOrderRef()
     {
         $cartId = (string)Context::getContext()->cart->id;
-        $suffix = $this->getOrderSuffix($cartId, $refreshSuffix);
         $prefix = Configuration::get('mpgs_order_prefix') ?: '';
 
-        return $prefix.$cartId.$suffix;
+        return $prefix.$cartId;
     }
 
     /**
@@ -1394,16 +1380,30 @@ EOT;
     /**
      * @return bool
      */
-    public function upgrade_module_1_3_5()
+    public function upgrade_module_1_3_6()
+    {
+        $dbPrefix = _DB_PREFIX_;
+        $query = <<<EOT
+DROP TABLE IF EXISTS `{$dbPrefix}mpgs_payment_order_suffix`;
+EOT;
+
+        return DB::getInstance()->execute($query);
+    }
+
+    /**
+     * @return bool
+     */
+    public function upgrade_module_1_3_7()
     {
         $dbPrefix = _DB_PREFIX_;
         $mysqlEngine = _MYSQL_ENGINE_;
         $query = <<<EOT
-CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_order_suffix` (
-    `order_suffix_id` int(10) unsigned NOT NULL auto_increment,
+CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_voids` (
+    `void_id` int(10) unsigned NOT NULL auto_increment,
     `order_id` int(10) unsigned NOT NULL,
-    `suffix` int(10) unsigned NOT NULL,
-     PRIMARY KEY  (`order_suffix_id`)
+    `total` decimal(20, 6) default 0.000000 NOT NULL,
+    `transaction_id` varchar(255) NOT NULL,
+     PRIMARY KEY  (`void_id`)
 ) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;
 EOT;
 
