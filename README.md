@@ -11,11 +11,6 @@ The module has been tested with the PrestaShop versions:
 - 1.7.7.8
 - 1.7.8.3
 
-and with PHP versions:
-- 7.1
-- 7.2
-- 7.3
-
 ## Obtain the module
 
 You can obtain the module by downloading a release from: [https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases](https://github.com/Mastercard-Gateway/gateway-prestashop-module/releases) - the module is licensed using [Apache License 2.0](https://github.com/Mastercard-Gateway/gateway-prestashop-module/blob/master/LICENSE.txt).
