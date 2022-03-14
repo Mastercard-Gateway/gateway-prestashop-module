@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2021 Mastercard
+ * Copyright (c) 2019-2022 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             $cart = Context::getContext()->cart;
 
             $customer = new Customer($cart->id_customer);
-            if (!Validate::isLoadedObject($customer)) {
+            if ( ! Validate::isLoadedObject($customer)) {
                 $this->errors[] = $this->module->l('Invalid data (customer)', 'hostedsession');
                 $this->redirectWithNotifications('index.php?controller=order&step=1');
             }
@@ -42,21 +42,26 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
             $this->_postProcess($cart, $customer);
 
             Tools::redirect(
-                sprintf("index.php?controller=order-confirmation&id_cart=%d&id_module=%d&id_order=%s&key=%s",
-                    (int)$cart->id, (int)$this->module->id, $this->module->currentOrder, $customer->secure_key)
+                sprintf(
+                    "index.php?controller=order-confirmation&id_cart=%d&id_module=%d&id_order=%s&key=%s",
+                    (int)$cart->id,
+                    (int)$this->module->id,
+                    $this->module->currentOrder,
+                    $customer->secure_key
+                )
             );
-
         } catch (Exception $e) {
             $this->errors[] = $e->getMessage();
-            $this->redirectWithNotifications(Context::getContext()->link->getPageLink('cart', null, null, array(
-                'action' => 'show'
-            )));
+
+            $this->_rejectCurrentOrder();
+            $this->redirectWithNotifications(Context::getContext()->link->getPageLink('order'));
         }
     }
 
     /**
      * @param Cart $cart
      * @param Customer $customer
+     *
      * @throws PrestaShopDatabaseException
      * @throws PrestaShopException
      * @throws \Http\Client\Exception
@@ -65,11 +70,11 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
     protected function _postProcess($cart, $customer)
     {
         $session = array(
-            'id' => Tools::getValue('session_id')
+            'id' => Tools::getValue('session_id'),
         );
 
         $authentication = [
-            'transactionId' => Tools::getValue('transaction_id')
+            'transactionId' => Tools::getValue('transaction_id'),
         ];
 
         $treeDSVersion = Configuration::get('mpgs_hs_3ds');
@@ -117,8 +122,7 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
                 new AuthorizationResponseHandler(),
                 new TransactionStatusResponseHandler(),
             ));
-
-        } else if ($action === Mastercard::PAYMENT_ACTION_PAY) {
+        } elseif ($action === Mastercard::PAYMENT_ACTION_PAY) {
             $response = $this->client->pay(
                 $this->module->getNewOrderRef(),
                 $orderData,
@@ -139,7 +143,6 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
                 new ResponseStatusHandler(),
                 new TransactionStatusResponseHandler(),
             ));
-
         } else {
             throw new Exception('Unexpected response from the Payment Gateway');
         }
@@ -154,14 +157,27 @@ class MastercardHostedSessionModuleFrontController extends MastercardAbstractMod
         $deltaAmount = $this->getDeltaAmount();
 
         $currency = Context::getContext()->currency;
+
         return array(
-            'currency' => $currency->iso_code,
-            'amount' => GatewayService::numeric(
+            'currency'                  => $currency->iso_code,
+            'amount'                    => GatewayService::numeric(
                 Context::getContext()->cart->getOrderTotal()
             ),
-            'item' => $this->module->getOrderItems($deltaAmount),
-            'itemAmount' => $this->module->getItemAmount($deltaAmount),
+            'item'                      => $this->module->getOrderItems($deltaAmount),
+            'itemAmount'                => $this->module->getItemAmount($deltaAmount),
             'shippingAndHandlingAmount' => $this->module->getShippingHandlingAmount($deltaAmount),
         );
+    }
+
+    /**
+     * @return void
+     */
+    protected function _rejectCurrentOrder()
+    {
+        $orderId = $this->module->currentOrder ?? false;
+        if ($orderId) {
+            $order = new Order($orderId);
+            $order->delete();
+        }
     }
 }
