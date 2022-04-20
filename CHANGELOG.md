@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.3.8] - 2022-04-20
+### Fixed
+- The products are removed from the customer's shopping cart if the payment fails
+
 
 ## [1.3.7] - 2022-02-07
 ### Fixed

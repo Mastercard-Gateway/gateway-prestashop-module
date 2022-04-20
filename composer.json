@@ -1,6 +1,6 @@
 {
   "name": "ontap/mastercard",
-  "version": "1.3.7",
+  "version": "1.3.8",
   "description": "Mastercard Payment Gateway Services module for Prestashop",
   "type": "prestashop-module",
   "require": {
