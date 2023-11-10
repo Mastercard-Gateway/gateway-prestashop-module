@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2022 Mastercard
+ * Copyright (c) 2019-2023 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -248,7 +248,7 @@ class GatewayService
      */
     protected function getSolutionId()
     {
-        return 'PRESTASHOP_'._PS_VERSION_.'_ONTAP_'.MPGS_VERSION;
+        return 'PRESTASHOP_'._PS_VERSION_.'_MASTERCARD_'.MPGS_VERSION;
     }
 
     /**
@@ -627,10 +627,12 @@ class GatewayService
         $uri = $this->apiUrl.'session';
 
         $request = $this->messageFactory->createRequest('POST', $uri, array(), json_encode(array(
-            'apiOperation'      => 'CREATE_CHECKOUT_SESSION',
+            'apiOperation'      => 'INITIATE_CHECKOUT',
             'partnerSolutionId' => $this->getSolutionId(),
             'order'             => array_merge($order, array(
                 'notificationUrl' => $this->webhookUrl,
+                'description'  => 'Customer Order',
+                'amount'        => $order['amount'],
             )),
             'billing'           => array(
                 'address' => $billing,
@@ -1037,7 +1039,7 @@ class GatewayService
     {
         $uri = $this->apiUrl.'paymentOptionsInquiry';
 
-        $request = $this->messageFactory->createRequest('GET', $uri);
+        $request = $this->messageFactory->createRequest('POST', $uri);
         $response = $this->client->sendRequest($request);
 
         $response = json_decode($response->getBody(), true);

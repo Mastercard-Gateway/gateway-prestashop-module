@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2021 Mastercard
+ * Copyright (c) 2019-2023 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,13 +32,13 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
         $orderId = $this->module->getNewOrderRef();
 
         $deltaAmount = $this->getDeltaAmount();
-
+        
         $order = array(
             'id' => $orderId,
             'reference' => $orderId,
             'currency' => Context::getContext()->currency->iso_code,
             'amount' => GatewayService::numeric(
-                Context::getContext()->cart->getOrderTotal()
+                Context::getContext()->cart->getOrderTotal() 
             ),
             'item' => $this->module->getOrderItems($deltaAmount),
             'itemAmount' => $this->module->getItemAmount($deltaAmount),
@@ -51,12 +51,12 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
                 'shipping' => 'HIDE',
                 'billingAddress' => GatewayService::safe(Configuration::get('mpgs_hc_show_billing')),
                 'customerEmail' => GatewayService::safe(Configuration::get('mpgs_hc_show_email')),
-                'orderSummary' => GatewayService::safe(Configuration::get('mpgs_hc_show_summary')),
             ),
             'merchant' => array(
                 'name' => GatewayService::safe(Context::getContext()->shop->name, 40),
             ),
             'operation' => Configuration::get('mpgs_hc_payment_action')
+            
         );
 
         /** @var ContextCore $context */
@@ -80,7 +80,7 @@ class MastercardHostedCheckoutModuleFrontController extends MastercardAbstractMo
             $this->getContactForGateway($customer),
             $this->getAddressForGateway($billingAddress),
             $this->getAddressForGateway($shippingAddress),
-            $this->getContactForGateway($shippingAddress)
+            $this->getContactForGateway($shippingAddress),
         );
 
         $responseData = array(

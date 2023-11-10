@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2019-2022 Mastercard
+ * Copyright (c) 2019-2023 Mastercard
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,13 +37,12 @@ require_once(dirname(__FILE__).'/model/MpgsVoid.php');
 class Mastercard extends PaymentModule
 {
     const PAYMENT_CODE = 'MPGS';
-    const MPGS_API_VERSION = '61';
+    const MPGS_API_VERSION = '73';
     const MPGS_3DS_LIB_VERSION = '1.3.0';
-
-    const PAYMENT_ACTION_PAY = 'PAY';
-    const PAYMENT_ACTION_AUTHCAPTURE = 'AUTHCAPTURE';
     const PAYMENT_CHECKOUT_SESSION_PURCHASE = 'PURCHASE';
     const PAYMENT_CHECKOUT_SESSION_AUTHORIZE = 'AUTHORIZE';
+    const PAYMENT_CHECKOUT_EMBEDDED_METHOD = 'EMBEDDED';
+    const PAYMENT_CHECKOUT_REDIRECT_METHOD = 'REDIRECT';
 
     /**
      * @var string
@@ -66,20 +65,16 @@ class Mastercard extends PaymentModule
     public function __construct()
     {
         $this->module_key = '5e026a47ceedc301311e969c872f8d41';
-
         $this->name = 'mastercard';
         $this->tab = 'payments_gateways';
-
-        $this->version = '1.3.8';
+        $this->version = '1.4.0';
         if (!defined('MPGS_VERSION')) {
             define('MPGS_VERSION', $this->version);
         }
-
-        $this->author = 'OnTap Networks Limited';
+        $this->author = 'MasterCard';
         $this->need_instance = 1;
         $this->controllers = array('payment', 'validation');
         $this->ps_versions_compliancy = array('min' => '1.7.1.0', 'max' => _PS_VERSION_);
-
         $this->currencies = true;
         $this->currencies_mode = 'checkbox';
 
@@ -88,7 +83,6 @@ class Mastercard extends PaymentModule
          */
         $this->bootstrap = true;
         parent::__construct();
-
         $this->controllerAdmin = 'AdminMpgs';
         $this->displayName = $this->l('Mastercard Payment Gateway Services');
         $this->description = $this->l('Mastercard Payment Gateway Services module for Prestashop');
@@ -148,6 +142,7 @@ class Mastercard extends PaymentModule
                $this->registerHook('displayAdminOrderSideBottom') &&
                $this->registerHook('displayBackOfficeOrderActions') &&
                $this->registerHook('actionObjectOrderSlipAddAfter') &&
+               $this->registerHook('displayBackOfficeHeader') &&
                $this->upgrade_module_1_2_0() &&
                $this->upgrade_module_1_3_0() &&
                $this->upgrade_module_1_3_3() &&
@@ -163,16 +158,13 @@ class Mastercard extends PaymentModule
     public function uninstall()
     {
         Configuration::deleteByName('mpgs_hc_title');
-        Configuration::deleteByName('mpgs_hs_title');
-
         $this->unregisterHook('paymentOptions');
         $this->unregisterHook('displayBackOfficeOrderActions');
         $this->unregisterHook('displayAdminOrderLeft');
         $this->unregisterHook('displayAdminOrderSideBottom');
         $this->unregisterHook('actionObjectOrderSlipAddAfter');
-
+        $this->unregisterHook('displayBackOfficeHeader');
         $this->uninstallTab();
-
         return parent::uninstall();
     }
 
@@ -182,6 +174,18 @@ class Mastercard extends PaymentModule
     public function hookDisplayBackOfficeOrderActions($params)
     {
         // noop
+    }
+
+    /**
+     * @param $params
+     */
+    public function hookDisplayBackOfficeHeader()
+    {
+        if (!$this->active) {
+            return;
+        }
+
+        $this->context->controller->addCSS($this->_path.'views/css/style.css', 'all');
     }
 
     /**
@@ -309,6 +313,7 @@ class Mastercard extends PaymentModule
                 $destination = _PS_ROOT_DIR_.'/img/os/'.(int)$order_state->id.'.gif';
                 copy($source, $destination);
             }
+
             Configuration::updateValue('MPGS_OS_FRAUD', (int)$order_state->id);
         }
 
@@ -360,23 +365,10 @@ class Mastercard extends PaymentModule
             if (!Tools::getValue('mpgs_merchant_id')) {
                 $this->_postErrors[] = $this->l('Merchant ID is required.');
             }
-//            if (!Tools::getValue('mpgs_api_password')) {
-//                $this->_postErrors[] = $this->l('API password is required.');
-//            }
-//            if (!Tools::getValue('mpgs_webhook_secret')) {
-//                $this->_postErrors[] = $this->l('Webhook Secret is required.');
-//            }
         } else {
             if (!Tools::getValue('test_mpgs_merchant_id')) {
                 $this->_postErrors[] = $this->l('Test Merchant ID is required.');
             }
-//            if (!Tools::getValue('test_mpgs_api_password')) {
-//                $this->_postErrors[] = $this->l('Test API password is required.');
-//            }
-            // In test mode, the Secret is not required
-//            if (!Tools::getValue('test_mpgs_webhook_secret')) {
-//                $this->_postErrors[] = $this->l('Test Webhook Secret is required.');
-//            }
         }
     }
 
@@ -393,13 +385,11 @@ class Mastercard extends PaymentModule
         $helper->module = $this;
         $helper->default_form_language = $this->context->language->id;
         $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG', 0);
-
         $helper->identifier = $this->identifier;
         $helper->submit_action = 'submitMastercardModule';
         $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false)
                                 .'&configure='.$this->name.'&tab_module='.$this->tab.'&module_name='.$this->name;
         $helper->token = Tools::getAdminTokenLite('AdminModules');
-
         $helper->tpl_vars = array(
             'fields_value' => $this->getAdminFormValues(), /* Add values for your inputs */
             'languages'    => $this->context->controller->getLanguages(),
@@ -409,7 +399,6 @@ class Mastercard extends PaymentModule
         return $helper->generateForm(array(
             $this->getAdminGeneralSettingsForm(),
             $this->getAdminHostedCheckoutForm(),
-            $this->getAdminHostedSessionForm(),
             $this->getAdminAdvancedSettingForm(),
         ));
     }
@@ -460,9 +449,6 @@ class Mastercard extends PaymentModule
                 Configuration::get('mpgs_hc_show_billing') ?: 'HIDE'),
             'mpgs_hc_show_email'     => Tools::getValue('mpgs_hc_show_email',
                 Configuration::get('mpgs_hc_show_email') ?: 'HIDE'),
-            'mpgs_hc_show_summary'   => Tools::getValue('mpgs_hc_show_summary',
-                Configuration::get('mpgs_hc_show_summary') ?: 'HIDE'),
-
             'mpgs_hs_active'         => Tools::getValue('mpgs_hs_active', Configuration::get('mpgs_hs_active')),
             'mpgs_hs_title'          => $hsTitle,
             'mpgs_hs_payment_action' => Tools::getValue('mpgs_hs_payment_action',
@@ -491,6 +477,8 @@ class Mastercard extends PaymentModule
                 Configuration::get('test_mpgs_api_password')),
             'test_mpgs_webhook_secret' => Tools::getValue('test_mpgs_webhook_secret',
                 Configuration::get('test_mpgs_webhook_secret') ?: null),
+            'mpgs_hc_payment_method' => Tools::getValue('mpgs_hc_payment_method',
+                Configuration::get('mpgs_hc_payment_method')),
         );
     }
 
@@ -538,34 +526,6 @@ class Mastercard extends PaymentModule
                         'name'     => 'mpgs_hc_theme',
                         'required' => false,
                     ),
-//                    array(
-//                        'type' => 'select',
-//                        'label' => $this->l('Billing Address display'),
-//                        'name' => 'mpgs_hc_show_billing',
-//                        'options' => array(
-//                            'query' => array(
-//                                array('id' => 'HIDE', 'name' => $this->l('Hide')),
-//                                array('id' => 'MANDATORY', 'name' => $this->l('Mandatory')),
-//                                array('id' => 'OPTIONAL', 'name' => $this->l('Optional')),
-//                            ),
-//                            'id' => 'id',
-//                            'name' => 'name',
-//                        ),
-//                    ),
-//                    array(
-//                        'type' => 'select',
-//                        'label' => $this->l('Email Address display'),
-//                        'name' => 'mpgs_hc_show_email',
-//                        'options' => array(
-//                            'query' => array(
-//                                array('id' => 'HIDE', 'name' => $this->l('Hide')),
-//                                array('id' => 'MANDATORY', 'name' => $this->l('Mandatory')),
-//                                array('id' => 'OPTIONAL', 'name' => $this->l('Optional')),
-//                            ),
-//                            'id' => 'id',
-//                            'name' => 'name',
-//                        ),
-//                    ),
                     array(
                         'type'    => 'select',
                         'label'   => $this->l('Payment Model'),
@@ -574,11 +534,11 @@ class Mastercard extends PaymentModule
                             'query' => array(
                                 array(
                                     'id'   => self::PAYMENT_CHECKOUT_SESSION_PURCHASE,
-                                    'name' => $this->l('Purchase (Pay)'),
+                                    'name' => $this->l('Purchase'),
                                 ),
                                 array(
                                     'id'   => self::PAYMENT_CHECKOUT_SESSION_AUTHORIZE,
-                                    'name' => $this->l('Authorize & Capture'),
+                                    'name' => $this->l('Authorize'),
                                 ),
                             ),
                             'id'    => 'id',
@@ -587,94 +547,18 @@ class Mastercard extends PaymentModule
                     ),
                     array(
                         'type'    => 'select',
-                        'label'   => $this->l('Order Summary display'),
-                        'name'    => 'mpgs_hc_show_summary',
-                        'options' => array(
-                            'query' => array(
-                                array('id' => 'HIDE', 'name' => $this->l('Hide')),
-                                array('id' => 'SHOW', 'name' => $this->l('Show')),
-                                array('id' => 'SHOW_PARTIAL', 'name' => $this->l('Show (without payment details)')),
-                            ),
-                            'id'    => 'id',
-                            'name'  => 'name',
-                        ),
-                    ),
-                ),
-                'submit' => array(
-                    'title' => $this->l('Save'),
-                ),
-            ),
-        );
-    }
-
-    /**
-     * @return array
-     */
-    protected function getAdminHostedSessionForm()
-    {
-        return array(
-            'form' => array(
-                'legend' => array(
-                    'title' => $this->l('Payment Method Settings - Hosted Session'),
-                    'icon'  => 'icon-cogs',
-                ),
-                'input'  => array(
-                    array(
-                        'type'    => 'switch',
-                        'label'   => $this->l('Enabled'),
-                        'name'    => 'mpgs_hs_active',
-                        'is_bool' => true,
-                        'desc'    => '',
-                        'values'  => array(
-                            array(
-                                'id'    => 'active_off',
-                                'value' => true,
-                                'label' => $this->l('Disabled'),
-                            ),
-                            array(
-                                'id'    => 'active_on',
-                                'value' => false,
-                                'label' => $this->l('Enabled'),
-                            ),
-                        ),
-                    ),
-                    array(
-                        'type'     => 'text',
-                        'label'    => $this->l('Title'),
-                        'name'     => 'mpgs_hs_title',
-                        'required' => true,
-                        'lang'     => true,
-                    ),
-                    array(
-                        'type'    => 'select',
-                        'label'   => $this->l('Payment Model'),
-                        'name'    => 'mpgs_hs_payment_action',
+                        'label'   => $this->l('Checkout Interaction Model'),
+                        'name'    => 'mpgs_hc_payment_method',
                         'options' => array(
                             'query' => array(
                                 array(
-                                    'id'   => self::PAYMENT_ACTION_PAY,
-                                    'name' => $this->l('Purchase (Pay)'),
-                                ),
+                                    'id' => self::PAYMENT_CHECKOUT_EMBEDDED_METHOD, 
+                                    'name' => $this->l('Embedded')),
                                 array(
-                                    'id'   => self::PAYMENT_ACTION_AUTHCAPTURE,
-                                    'name' => $this->l('Authorize & Capture'),
-                                ),
+                                    'id' => self::PAYMENT_CHECKOUT_REDIRECT_METHOD, 
+                                    'name' => $this->l('Redirect to Payment Page')),
                             ),
                             'id'    => 'id',
-                            'name'  => 'name',
-                        ),
-                    ),
-                    array(
-                        'type'    => 'select',
-                        'label'   => $this->l('3D Secure'),
-                        'name'    => 'mpgs_hs_3ds',
-                        'options' => array(
-                            'query' => array(
-                                array('value' => '', 'name' => $this->l('Disabled')),
-                                array('value' => '1', 'name' => $this->l('3DS')),
-                                array('value' => '2', 'name' => $this->l('EMV 3DS (3DS2)')),
-                            ),
-                            'id'    => 'value',
                             'name'  => 'name',
                         ),
                     ),
@@ -972,7 +856,6 @@ class Mastercard extends PaymentModule
             );
 
             $refund = new MpgsRefund();
-
             $refund->order_id = $order->id;
             $refund->total = $amount;
             $refund->transaction_id = $response['transaction']['id'];
@@ -1013,7 +896,6 @@ class Mastercard extends PaymentModule
         $canCapture = $isAuthorized;
         $canRefund = $order->current_state == Configuration::get('PS_OS_PAYMENT');
         $canReview = $order->current_state == Configuration::get('MPGS_OS_REVIEW_REQUIRED');
-
         $canAction = $isAuthorized || $canVoid || $canCapture || $canRefund;
 
         $this->smarty->assign(array(
@@ -1053,6 +935,7 @@ class Mastercard extends PaymentModule
                 'amount'      => $this->context->cart->getOrderTotal(),
                 'currency'    => $this->context->currency->iso_code,
                 'order_id'    => $this->getNewOrderRef(),
+                'method'      => Configuration::get('mpgs_hc_payment_method'),
             ),
         ));
 
@@ -1088,24 +971,6 @@ class Mastercard extends PaymentModule
      * @return PaymentOption
      * @throws SmartyException
      */
-    protected function getHostedSessionPaymentOption()
-    {
-        $form = $this->generateHostedSessionForm();
-
-        $option = new PaymentOption();
-        $option
-            ->setModuleName($this->name.'_hs')
-            ->setCallToActionText(Configuration::get('mpgs_hs_title', $this->context->language->id))
-            ->setAdditionalInformation($this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedsession.tpl'))
-            ->setForm($form);
-
-        return $option;
-    }
-
-    /**
-     * @return PaymentOption
-     * @throws SmartyException
-     */
     protected function getHostedCheckoutPaymentOption()
     {
         $form = $this->generateHostedCheckoutForm();
@@ -1114,28 +979,9 @@ class Mastercard extends PaymentModule
         $option
             ->setModuleName($this->name.'_hc')
             ->setCallToActionText(Configuration::get('mpgs_hc_title', $this->context->language->id))
-            //->setAdditionalInformation($this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedcheckout.tpl'))
             ->setForm($form);
 
         return $option;
-    }
-
-    /**
-     * @return string
-     * @throws SmartyException
-     * @throws Exception
-     */
-    protected function generateHostedSessionForm()
-    {
-        $this->context->smarty->assign(array(
-            'hostedsession_action_url'    => $this->context->link->getModuleLink($this->name, 'hostedsession', array(),
-                true),
-            'hostedsession_component_url' => $this->getHostedSessionJsComponentUrl(),
-            'hostedsession_3ds_url'       => $this->getHostedSession3DSUrl(),
-            'hostedsession_3ds'           => Configuration::get('mpgs_hs_3ds'),
-        ));
-
-        return $this->context->smarty->fetch('module:mastercard/views/templates/front/methods/hostedsession/form.tpl');
     }
 
     /**
@@ -1183,19 +1029,7 @@ class Mastercard extends PaymentModule
     {
         $cacheBust = (int)round(microtime(true));
 
-        return 'https://'.$this->getApiEndpoint().'/checkout/version/'.$this->getApiVersion().'/checkout.js?_='.$cacheBust;
-    }
-
-    /**
-     * @return string
-     * @throws Exception
-     * https://mtf.gateway.mastercard.com/form/version/50/merchant/<MERCHANTID>/session.js
-     */
-    public function getHostedSessionJsComponentUrl()
-    {
-        $cacheBust = (int)round(microtime(true));
-
-        return 'https://'.$this->getApiEndpoint().'/form/version/'.$this->getApiVersion().'/merchant/'.$this->getConfigValue('mpgs_merchant_id').'/session.js?_='.$cacheBust;
+        return 'https://'.$this->getApiEndpoint().'/static/checkout/checkout.min.js?_='.$cacheBust;
     }
 
     /**
@@ -1364,15 +1198,15 @@ class Mastercard extends PaymentModule
         $dbPrefix = _DB_PREFIX_;
         $mysqlEngine = _MYSQL_ENGINE_;
         $query = <<<EOT
-CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_refunds` (
-    `refund_id` int(10) unsigned NOT NULL auto_increment,
-    `order_id` int(10) unsigned NOT NULL,
-    `order_slip_id` int(10) unsigned,
-    `total` decimal(20, 6) default 0.000000 NOT NULL,
-    `transaction_id` varchar(255) NOT NULL,
-     PRIMARY KEY  (`refund_id`)
-) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;
-EOT;
+        CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_refunds` (
+            `refund_id` int(10) unsigned NOT NULL auto_increment,
+            `order_id` int(10) unsigned NOT NULL,
+            `order_slip_id` int(10) unsigned,
+            `total` decimal(20, 6) default 0.000000 NOT NULL,
+            `transaction_id` varchar(255) NOT NULL,
+             PRIMARY KEY  (`refund_id`)
+        ) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;
+        EOT;
 
         return DB::getInstance()->execute($query);
     }
@@ -1384,8 +1218,8 @@ EOT;
     {
         $dbPrefix = _DB_PREFIX_;
         $query = <<<EOT
-DROP TABLE IF EXISTS `{$dbPrefix}mpgs_payment_order_suffix`;
-EOT;
+        DROP TABLE IF EXISTS `{$dbPrefix}mpgs_payment_order_suffix`;
+        EOT;
 
         return DB::getInstance()->execute($query);
     }
@@ -1398,14 +1232,14 @@ EOT;
         $dbPrefix = _DB_PREFIX_;
         $mysqlEngine = _MYSQL_ENGINE_;
         $query = <<<EOT
-CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_voids` (
-    `void_id` int(10) unsigned NOT NULL auto_increment,
-    `order_id` int(10) unsigned NOT NULL,
-    `total` decimal(20, 6) default 0.000000 NOT NULL,
-    `transaction_id` varchar(255) NOT NULL,
-     PRIMARY KEY  (`void_id`)
-) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;
-EOT;
+        CREATE TABLE IF NOT EXISTS `{$dbPrefix}mpgs_payment_voids` (
+            `void_id` int(10) unsigned NOT NULL auto_increment,
+            `order_id` int(10) unsigned NOT NULL,
+            `total` decimal(20, 6) default 0.000000 NOT NULL,
+            `transaction_id` varchar(255) NOT NULL,
+             PRIMARY KEY  (`void_id`)
+        ) ENGINE={$mysqlEngine} DEFAULT CHARSET=utf8;
+        EOT;
 
         return DB::getInstance()->execute($query);
     }

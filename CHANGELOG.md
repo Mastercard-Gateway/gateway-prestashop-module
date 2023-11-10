@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2023-08-02
+### Changed
+- Enhanced Compatibility: Compatible with PHP 8.1 & Prestashop 8.0.x (tested with v8.0.4).
+- The module has been updated to API version 73.
+- Added the Checkout Interaction Model feature to the admin settings.
+- Hosted session payment method is no longer supported.
+
 ## [1.3.8] - 2022-04-20
 ### Fixed
 - The products are removed from the customer's shopping cart if the payment fails
