@@ -80,35 +80,11 @@
         }
 
         Checkout.configure({
-            merchant: merchantId,
-            order: {
-                amount: function () {
-                    return {$mpgs_config.amount|string_format:"%.2f"};
-                },
-                currency: '{$mpgs_config.currency|escape:javascript}',
-                description: 'Customer Order',
-                id: orderId
-            },
+            
             session: {
-                id: sessionId,
-                version: sessionVersion
-            },
-            interaction: {
-                locale: '{$language.locale}',
-                displayControl: {
-                    billingAddress: 'HIDE',
-                    shipping: 'HIDE'
-                },
-                merchant: {
-                    name: '{$shop.name}',
-                    address: {
-                        line1: '{$shop.address.address1|escape:javascript}',
-                        line2: '{$shop.address.address2|escape:javascript}',
-                        line3: '{$shop.address.city|escape:javascript} {$shop.address.postcode|escape:javascript}',
-                        line4: '{$shop.address.country|escape:javascript}'
-                    }
-                }
+                id: sessionId
             }
+            
         });
         Checkout.showPaymentPage();
     </script>
